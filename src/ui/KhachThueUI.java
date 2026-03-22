@@ -7,11 +7,22 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class KhachThueUI extends JPanel {
 
     private DefaultTableModel model;
     private int nextCustomerNumber = 1;
+
+    // ===== PAGINATION =====
+    private final int ITEMS_PER_PAGE = 4;
+    private int currentPage = 1;
+    private final List<Object[]> allTenants = new ArrayList<>();
+
+    private JLabel lblInfo;
+    private RoundedWhiteButton btnPrev;
+    private RoundedWhiteButton btnNext;
 
     public KhachThueUI() {
         setLayout(new BorderLayout());
@@ -70,13 +81,6 @@ public class KhachThueUI extends JPanel {
         // ===== MAIN CONTENT =====
         JPanel mainContent = new JPanel(new BorderLayout());
         mainContent.setBackground(bgMain);
-        mainContent.setFocusable(true);
-        mainContent.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                mainContent.requestFocusInWindow();
-            }
-        });
 
         // ===== TOOLBAR =====
         JPanel toolbar = new JPanel();
@@ -107,23 +111,9 @@ public class KhachThueUI extends JPanel {
         JPanel content = new JPanel(new BorderLayout());
         content.setBackground(bgMain);
         content.setBorder(new EmptyBorder(0, 20, 0, 20));
-        content.setFocusable(true);
-        content.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                content.requestFocusInWindow();
-            }
-        });
 
         RoundedBoxPanel box = new RoundedBoxPanel();
         box.setLayout(new BorderLayout());
-        box.setFocusable(true);
-        box.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                box.requestFocusInWindow();
-            }
-        });
 
         // ===== SEARCH + FILTER =====
         JPanel topSection = new JPanel(new BorderLayout(15, 0));
@@ -154,7 +144,7 @@ public class KhachThueUI extends JPanel {
         };
 
         JTable table = new JTable(model);
-        table.setRowHeight(60);
+        table.setRowHeight(88);
         table.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         table.setShowGrid(false);
         table.setIntercellSpacing(new Dimension(0, 0));
@@ -162,9 +152,27 @@ public class KhachThueUI extends JPanel {
         table.setSelectionBackground(new Color(245, 245, 255));
         table.setSelectionForeground(Color.BLACK);
 
-        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
-        centerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
-        centerRenderer.setVerticalAlignment(SwingConstants.CENTER);
+        // ===== FIX ô xanh / focus cell =====
+        table.setCellSelectionEnabled(false);
+        table.setRowSelectionAllowed(true);
+        table.setColumnSelectionAllowed(false);
+        table.setFocusable(false);
+
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(
+                    JTable table, Object value, boolean isSelected,
+                    boolean hasFocus, int row, int column) {
+
+                JLabel label = (JLabel) super.getTableCellRendererComponent(
+                        table, value, isSelected, false, row, column);
+
+                label.setHorizontalAlignment(SwingConstants.CENTER);
+                label.setVerticalAlignment(SwingConstants.CENTER);
+                label.setBorder(new EmptyBorder(0, 10, 0, 10));
+                return label;
+            }
+        };
 
         DefaultTableCellRenderer leftPaddingRenderer = new DefaultTableCellRenderer() {
             @Override
@@ -173,7 +181,7 @@ public class KhachThueUI extends JPanel {
                     boolean hasFocus, int row, int column) {
 
                 JLabel label = (JLabel) super.getTableCellRendererComponent(
-                        table, value, isSelected, hasFocus, row, column);
+                        table, value, isSelected, false, row, column);
 
                 label.setHorizontalAlignment(SwingConstants.LEFT);
                 label.setVerticalAlignment(SwingConstants.CENTER);
@@ -209,12 +217,11 @@ public class KhachThueUI extends JPanel {
                     boolean hasFocus, int row, int column) {
 
                 JLabel label = (JLabel) super.getTableCellRendererComponent(
-                        table, value, isSelected, hasFocus, row, column);
+                        table, value, isSelected, false, row, column);
 
                 label.setBackground(new Color(245, 245, 245));
                 label.setForeground(new Color(110, 110, 110));
                 label.setBorder(BorderFactory.createEmptyBorder());
-
                 return label;
             }
         });
@@ -242,15 +249,15 @@ public class KhachThueUI extends JPanel {
         bottomSection.setOpaque(false);
         bottomSection.setBorder(new EmptyBorder(10, 15, 15, 15));
 
-        JLabel lblInfo = new JLabel("Hiển thị 0 khách");
+        lblInfo = new JLabel("Hiển thị 0 khách");
         lblInfo.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         lblInfo.setForeground(Color.GRAY);
 
         JPanel pagingPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         pagingPanel.setOpaque(false);
 
-        RoundedWhiteButton btnPrev = new RoundedWhiteButton("Trước");
-        RoundedWhiteButton btnNext = new RoundedWhiteButton("Sau");
+        btnPrev = new RoundedWhiteButton("Trước");
+        btnNext = new RoundedWhiteButton("Sau");
         btnPrev.setPreferredSize(new Dimension(80, 35));
         btnNext.setPreferredSize(new Dimension(80, 35));
 
@@ -270,7 +277,99 @@ public class KhachThueUI extends JPanel {
         add(mainContent, BorderLayout.CENTER);
 
         // ===== BUTTON EVENT =====
-        btnAdd.addActionListener(e -> showAddTenantDialog(lblInfo));
+        btnAdd.addActionListener(e -> showAddTenantDialog());
+
+        btnPrev.addActionListener(e -> {
+            if (currentPage > 1) {
+                currentPage--;
+                refreshTable();
+            }
+        });
+
+        btnNext.addActionListener(e -> {
+            if (currentPage < getTotalPages()) {
+                currentPage++;
+                refreshTable();
+            }
+        });
+
+        // ===== DATA MẪU =====
+        addTenantToList("A", "111", "a@gmail.com", "P101", "03/14/2026");
+        addTenantToList("B", "222", "b@gmail.com", "P102", "03/14/2026");
+        addTenantToList("C", "333", "c@gmail.com", "P103", "03/14/2026");
+        addTenantToList("D", "444", "d@gmail.com", "P104", "03/14/2026");
+        addTenantToList("E", "555", "e@gmail.com", "P105", "03/14/2026");
+        addTenantToList("F", "666", "f@gmail.com", "P106", "03/14/2026");
+        addTenantToList("G", "777", "g@gmail.com", "P107", "03/14/2026");
+        addTenantToList("H", "888", "h@gmail.com", "P108", "03/14/2026");
+        addTenantToList("I", "999", "i@gmail.com", "P109", "03/14/2026");
+
+        // Mở mặc định ở trang 1
+        currentPage = 1;
+        refreshTable();
+    }
+
+    private int getTotalPages() {
+        if (allTenants.isEmpty()) return 1;
+        return (int) Math.ceil((double) allTenants.size() / ITEMS_PER_PAGE);
+    }
+
+    private void refreshTable() {
+        model.setRowCount(0);
+
+        int totalPages = getTotalPages();
+        if (currentPage > totalPages) {
+            currentPage = totalPages;
+        }
+        if (currentPage < 1) {
+            currentPage = 1;
+        }
+
+        int start = (currentPage - 1) * ITEMS_PER_PAGE;
+        int end = Math.min(start + ITEMS_PER_PAGE, allTenants.size());
+
+        for (int i = start; i < end; i++) {
+            model.addRow(allTenants.get(i));
+        }
+
+        lblInfo.setText("Đang có " + allTenants.size() + " khách - Trang " + currentPage + "/" + totalPages);
+
+        btnPrev.setEnabled(currentPage > 1);
+        btnNext.setEnabled(currentPage < totalPages);
+    }
+
+    private void addTenantToList(String hoTen, String soDienThoai, String email, String phong, String ngayVao) {
+        String maKhach = String.format("KH%03d", nextCustomerNumber);
+        nextCustomerNumber++;
+
+        String tenHienThi =
+                "<html><div style='padding-left:10px;'>" +
+                        "<b>" + hoTen + "</b><br>" +
+                        "<span style='color:#6b7280;'>Mã: " + maKhach + "</span>" +
+                        "</div></html>";
+
+        String lienHeHienThi =
+                "<html><div style='padding-left:10px;'>" +
+                        soDienThoai + "<br>" +
+                        "<span style='color:#6b7280;'>" + email + "</span>" +
+                        "</div></html>";
+
+        String thaoTacHienThi =
+                "<html><div style='text-align:center;'>" +
+                        "Chỉnh sửa<br>" +
+                        "<span style='color:red;'>Xóa</span>" +
+                        "</div></html>";
+
+        Object[] row = new Object[]{
+                tenHienThi,
+                phong,
+                lienHeHienThi,
+                ngayVao,
+                "Đang thuê",
+                thaoTacHienThi
+        };
+
+        allTenants.add(row);
     }
 
     private JPanel createMenuItem(String text, boolean selected) {
@@ -293,23 +392,23 @@ public class KhachThueUI extends JPanel {
         return wrapper;
     }
 
-    private void showAddTenantDialog(JLabel lblInfo) {
+    private void showAddTenantDialog() {
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), true);
         dialog.setUndecorated(true);
-        dialog.setSize(500, 700);
+        dialog.setBackground(new Color(0, 0, 0, 0));
+        dialog.setSize(520, 700);
         dialog.setLocationRelativeTo(this);
         dialog.setLayout(new BorderLayout());
-        dialog.getContentPane().setBackground(new Color(0, 0, 0, 0));
 
-        RoundedBoxPanel container = new RoundedBoxPanel();
+        RoundedDialogPanel container = new RoundedDialogPanel();
         container.setLayout(new BorderLayout());
-        container.setBorder(new EmptyBorder(20, 20, 20, 20));
+        container.setBorder(new EmptyBorder(18, 18, 18, 18));
         dialog.setContentPane(container);
 
         JPanel formPanel = new JPanel();
-        formPanel.setBackground(Color.WHITE);
+        formPanel.setOpaque(false);
         formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS));
-        formPanel.setBorder(new EmptyBorder(20, 25, 20, 25));
+        formPanel.setBorder(new EmptyBorder(18, 28, 18, 28));
 
         JLabel title = new JLabel("Thêm khách thuê mới");
         title.setFont(new Font("Segoe UI", Font.BOLD, 18));
@@ -344,7 +443,7 @@ public class KhachThueUI extends JPanel {
         formPanel.add(Box.createVerticalStrut(18));
 
         JPanel buttonPanel = new JPanel(new GridLayout(1, 2, 12, 0));
-        buttonPanel.setBackground(Color.WHITE);
+        buttonPanel.setOpaque(false);
         buttonPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
         buttonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -375,37 +474,9 @@ public class KhachThueUI extends JPanel {
                 return;
             }
 
-            String maKhach = String.format("KH%03d", nextCustomerNumber);
-            nextCustomerNumber++;
-
-            String tenHienThi =
-                    "<html><div style='padding-left:10px;'>" +
-                    "<b>" + hoTen + "</b><br>" +
-                    "<span style='color:#6b7280;'>Mã: " + maKhach + "</span>" +
-                    "</div></html>";
-
-            String lienHeHienThi =
-                    "<html><div style='padding-left:10px;'>" +
-                    soDienThoai + "<br>" +
-                    "<span style='color:#6b7280;'>" + email + "</span>" +
-                    "</div></html>";
-
-            String thaoTacHienThi =
-                    "<html><div style='text-align:center;'>" +
-                    "Chỉnh sửa<br>" +
-                    "<span style='color:red;'>Xóa</span>" +
-                    "</div></html>";
-
-            model.addRow(new Object[]{
-                    tenHienThi,
-                    phong,
-                    lienHeHienThi,
-                    ngayVao,
-                    "Đang thuê",
-                    thaoTacHienThi
-            });
-
-            lblInfo.setText("Hiển thị " + model.getRowCount() + " khách");
+            addTenantToList(hoTen, soDienThoai, email, phong, ngayVao);
+            currentPage = getTotalPages();
+            refreshTable();
             dialog.dispose();
         });
 
@@ -510,7 +581,32 @@ public class KhachThueUI extends JPanel {
             g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, radius, radius);
 
             g2.dispose();
+            super.paintComponent(g);
+        }
+    }
 
+    class RoundedDialogPanel extends JPanel {
+        private final int radius = 22;
+
+        public RoundedDialogPanel() {
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(
+                    RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON
+            );
+
+            g2.setColor(new Color(245, 245, 245));
+            g2.fillRoundRect(0, 0, getWidth(), getHeight(), radius, radius);
+
+            g2.setColor(new Color(210, 210, 210));
+            g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, radius, radius);
+
+            g2.dispose();
             super.paintComponent(g);
         }
     }
@@ -605,14 +701,24 @@ public class KhachThueUI extends JPanel {
                     RenderingHints.VALUE_ANTIALIAS_ON
             );
 
-            g2.setColor(Color.WHITE);
+            Color fillColor = isEnabled() ? Color.WHITE : new Color(245, 245, 245);
+            Color borderColor = isEnabled() ? new Color(220, 220, 220) : new Color(230, 230, 230);
+            Color textColor = isEnabled() ? new Color(60, 60, 60) : new Color(170, 170, 170);
+
+            g2.setColor(fillColor);
             g2.fillRoundRect(0, 0, getWidth(), getHeight(), radius, radius);
 
-            g2.setColor(new Color(220, 220, 220));
+            g2.setColor(borderColor);
             g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, radius, radius);
 
+            FontMetrics fm = g2.getFontMetrics();
+            int x = (getWidth() - fm.stringWidth(getText())) / 2;
+            int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
+
+            g2.setColor(textColor);
+            g2.drawString(getText(), x, y);
+
             g2.dispose();
-            super.paintComponent(g);
         }
 
         @Override
@@ -629,31 +735,72 @@ public class KhachThueUI extends JPanel {
             setFont(new Font("Segoe UI", Font.PLAIN, 14));
             setBackground(Color.WHITE);
             setForeground(new Color(40, 40, 40));
-            setBorder(new EmptyBorder(0, 12, 0, 12));
+            setBorder(new EmptyBorder(0, 12, 0, 36));
+            setFocusable(false);
 
             setUI(new BasicComboBoxUI() {
                 @Override
                 protected JButton createArrowButton() {
-                    JButton button = new JButton("▼");
-                    button.setBorder(BorderFactory.createEmptyBorder());
+                    JButton button = new JButton() {
+                        @Override
+                        protected void paintComponent(Graphics g) {
+                            Graphics2D g2 = (Graphics2D) g.create();
+                            g2.setRenderingHint(
+                                    RenderingHints.KEY_ANTIALIASING,
+                                    RenderingHints.VALUE_ANTIALIAS_ON
+                            );
+
+                            int w = getWidth();
+                            int h = getHeight();
+
+                            int[] x = {w / 2 - 4, w / 2 + 4, w / 2};
+                            int[] y = {h / 2 - 2, h / 2 - 2, h / 2 + 3};
+
+                            g2.setColor(new Color(80, 80, 80));
+                            g2.fillPolygon(x, y, 3);
+
+                            g2.dispose();
+                        }
+                    };
+
+                    button.setPreferredSize(new Dimension(30, 30));
+                    button.setOpaque(false);
                     button.setContentAreaFilled(false);
+                    button.setBorderPainted(false);
                     button.setFocusPainted(false);
-                    button.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+                    button.setCursor(new Cursor(Cursor.HAND_CURSOR));
                     return button;
+                }
+
+                @Override
+                public void paintCurrentValueBackground(Graphics g, Rectangle bounds, boolean hasFocus) {
                 }
             });
 
             setRenderer(new DefaultListCellRenderer() {
                 @Override
-                public Component getListCellRendererComponent(JList<?> list, Object value, int index,
-                                                              boolean isSelected, boolean cellHasFocus) {
+                public Component getListCellRendererComponent(
+                        JList<?> list, Object value, int index,
+                        boolean isSelected, boolean cellHasFocus) {
+
                     JLabel label = (JLabel) super.getListCellRendererComponent(
                             list, value, index, isSelected, cellHasFocus);
+
                     label.setBorder(new EmptyBorder(6, 10, 6, 10));
-                    if (isSelected) {
-                        label.setBackground(new Color(240, 240, 240));
+
+                    if (index == -1) {
+                        label.setOpaque(false);
+                        label.setForeground(new Color(40, 40, 40));
+                    } else {
+                        label.setOpaque(true);
+                        if (isSelected) {
+                            label.setBackground(new Color(240, 240, 240));
+                        } else {
+                            label.setBackground(Color.WHITE);
+                        }
                         label.setForeground(Color.BLACK);
                     }
+
                     return label;
                 }
             });
@@ -670,11 +817,22 @@ public class KhachThueUI extends JPanel {
             g2.setColor(Color.WHITE);
             g2.fillRoundRect(0, 0, getWidth(), getHeight(), radius, radius);
 
+            g2.dispose();
+            super.paintComponent(g);
+        }
+
+        @Override
+        protected void paintBorder(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(
+                    RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON
+            );
+
             g2.setColor(new Color(220, 220, 220));
             g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, radius, radius);
 
             g2.dispose();
-            super.paintComponent(g);
         }
     }
 
