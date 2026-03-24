@@ -108,6 +108,7 @@ public class MainFrame extends JFrame {
         // Đăng ký các màn hình tương ứng với tên Menu
         contentPanel.add(new DashboardPanel(), "Tổng quan");
         // Thêm màn hình Khách thuê (Code ở bên dưới)
+        contentPanel.add(new PhongPanel(), "Phòng");
         contentPanel.add(new KhachThuePanel(),"Khách Thuê");
         
         // Tạo sẵn label tạm cho các menu chưa code
