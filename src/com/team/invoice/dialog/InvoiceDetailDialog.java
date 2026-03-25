@@ -1,4 +1,4 @@
-package com.team.invoice.ui;
+package com.team.invoice.dialog;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;

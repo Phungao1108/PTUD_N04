@@ -1,4 +1,4 @@
-package com.team.invoice.ui;
+package com.team.invoice.components;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -20,11 +20,6 @@ import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.JTableHeader;
-
-import com.team.invoice.ui.components.AppColors;
-import com.team.invoice.ui.components.HintTextField;
-import com.team.invoice.ui.components.RoundedButton;
-import com.team.invoice.ui.components.RoundedPanel;
 
 public final class UITheme {
     private UITheme() {}

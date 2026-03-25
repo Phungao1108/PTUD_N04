@@ -1,9 +1,10 @@
 
 package com.team.invoice.main;
 
-import javax.swing.*;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 
-import com.team.invoice.ui.*;
+import com.team.invoice.ui.LoginFrame;
 
 public class Main {
     public static void main(String[] args) {

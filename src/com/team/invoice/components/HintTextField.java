@@ -1,4 +1,4 @@
-package com.team.invoice.ui.components;
+package com.team.invoice.components;
 
 import java.awt.Color;
 import java.awt.FontMetrics;

@@ -1,4 +1,4 @@
-package com.team.invoice.model;
+package com.team.invoice.entity;
 
 public class Room {
     private String code;

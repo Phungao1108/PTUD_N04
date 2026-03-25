@@ -1,4 +1,4 @@
-package com.team.invoice.ui;
+package com.team.invoice.dialog;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -23,12 +23,12 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
-import com.team.invoice.model.Invoice;
-import com.team.invoice.model.InvoiceFormData;
-import com.team.invoice.model.Room;
-import com.team.invoice.ui.components.AppColors;
-import com.team.invoice.ui.components.RoundedButton;
-import com.team.invoice.ui.components.RoundedPanel;
+import com.team.invoice.components.AppColors;
+import com.team.invoice.components.RoundedButton;
+import com.team.invoice.components.RoundedPanel;
+import com.team.invoice.entity.Invoice;
+import com.team.invoice.entity.InvoiceFormData;
+import com.team.invoice.entity.Room;
 import com.team.invoice.util.CurrencyUtils;
 
 public class CreateInvoiceDialog extends JDialog {

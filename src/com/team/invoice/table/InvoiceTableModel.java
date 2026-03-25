@@ -1,11 +1,11 @@
-package com.team.invoice.ui;
+package com.team.invoice.table;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.table.AbstractTableModel;
 
-import com.team.invoice.model.Invoice;
+import com.team.invoice.entity.Invoice;
 import com.team.invoice.util.CurrencyUtils;
 import com.team.invoice.util.DateUtils;
 

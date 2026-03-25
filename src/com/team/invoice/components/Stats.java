@@ -1,4 +1,4 @@
-package com.team.invoice.ui;
+package com.team.invoice.components;
 
 public class Stats {
     public double total;
