@@ -43,7 +43,7 @@ public class SidebarPanel extends JPanel {
         menuContainer.setBackground(AppColors.TEXT);
         menuContainer.setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        String[] menuItems = {"Tổng quan", "Loại phòng", "Dịch vụ", "Bảng giá", "Đơn giá", "Hóa đơn", "Cài đặt"};
+        String[] menuItems = {"Tổng quan", "Loại phòng", "Phòng", "Dịch vụ", "Bảng giá", "Đơn giá", "Hóa đơn", "Cài đặt"};
         // Tạo các nút bấm (Tên hiển thị phải khớp với Key trong ContentPanel)
 
         
