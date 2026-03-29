@@ -32,10 +32,32 @@ public class HopDongDAO {
     }
 
     public List<String> findAvailableRoomIds() throws SQLException {
+        return findAvailableRoomIdsExcept(null);
+    }
+
+    public List<String> findAvailableRoomIdsExcept(String excludeContractId) throws SQLException {
         String sql = "SELECT c.id FROM CoSoVatChat c " +
                      "WHERE c.loai = 'PHONG' AND c.isDeleted = 0 " +
-                     "AND NOT EXISTS (SELECT 1 FROM HopDong h WHERE h.maPhong = c.id AND h.trangThai = 'HIEU_LUC' AND h.isDeleted = 0) " +
-                     "ORDER BY c.id";
+                     "AND NOT EXISTS (SELECT 1 FROM HopDong h WHERE h.maPhong = c.id AND h.trangThai = 'HIEU_LUC' AND h.isDeleted = 0" +
+                     (excludeContractId != null ? " AND h.maHopDong <> ?" : "") +
+                     ") ORDER BY c.id";
+        List<String> list = new ArrayList<>();
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            if (excludeContractId != null) {
+                ps.setString(1, excludeContractId);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(rs.getString(1));
+                }
+            }
+        }
+        return list;
+    }
+
+    public List<String> findAllRoomIds() throws SQLException {
+        String sql = "SELECT id FROM CoSoVatChat WHERE loai = 'PHONG' AND isDeleted = 0 ORDER BY id";
         List<String> list = new ArrayList<>();
         try (Connection con = DBConnection.getConnection();
              PreparedStatement ps = con.prepareStatement(sql);
@@ -60,6 +82,68 @@ public class HopDongDAO {
             ps.setBigDecimal(6, hd.getTienDatCoc());
             ps.setString(7, hd.getTrangThai());
             return ps.executeUpdate() > 0;
+        }
+    }
+
+    public boolean update(HopDong hd) throws SQLException {
+        String sql = "UPDATE HopDong SET maPhong = ?, maKhachChinh = ?, ngayBatDau = ?, ngayKetThuc = ?, tienDatCoc = ?, trangThai = ? " +
+                     "WHERE maHopDong = ? AND isDeleted = 0";
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, hd.getMaPhong());
+            ps.setString(2, hd.getMaKhachChinh());
+            ps.setDate(3, hd.getNgayBatDau());
+            ps.setDate(4, hd.getNgayKetThuc());
+            ps.setBigDecimal(5, hd.getTienDatCoc());
+            ps.setString(6, hd.getTrangThai());
+            ps.setString(7, hd.getMaHopDong());
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    public boolean softDelete(String maHopDong) throws SQLException {
+        String sql = "UPDATE HopDong SET isDeleted = 1, trangThai = 'HUY' WHERE maHopDong = ? AND isDeleted = 0";
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, maHopDong);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    public String findRoomByContractId(String maHopDong) throws SQLException {
+        String sql = "SELECT maPhong FROM HopDong WHERE maHopDong = ? AND isDeleted = 0";
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, maHopDong);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getString(1) : null;
+            }
+        }
+    }
+
+    public String findStatusByContractId(String maHopDong) throws SQLException {
+        String sql = "SELECT trangThai FROM HopDong WHERE maHopDong = ? AND isDeleted = 0";
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, maHopDong);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getString(1) : null;
+            }
+        }
+    }
+
+    public boolean isRoomOccupiedByOtherActiveContract(String maPhong, String excludeContractId) throws SQLException {
+        String sql = "SELECT 1 FROM HopDong WHERE maPhong = ? AND trangThai = 'HIEU_LUC' AND isDeleted = 0 " +
+                     (excludeContractId != null ? "AND maHopDong <> ?" : "");
+        try (Connection con = DBConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, maPhong);
+            if (excludeContractId != null) {
+                ps.setString(2, excludeContractId);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
         }
     }
 }
