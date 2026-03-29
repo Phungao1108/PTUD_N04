@@ -15,7 +15,6 @@ import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JTextField;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
@@ -32,13 +31,8 @@ import com.team.invoice.util.FocusUtils;
 public class PhongDialog extends JDialog {
     private HintTextField txtMaPhong;
     private HintTextField txtTenPhong;
-    private HintTextField txtKhachHienTai;
-    private HintTextField txtGiaThang;
-    private HintTextField txtDien;
-    private HintTextField txtNuoc;
-    private HintTextField txtDichVu;
-    private HintTextField txtKyChiSo;
 
+    private JComboBox<String> cboTang;
     private JComboBox<String> cboLoaiPhong;
     private JComboBox<String> cboTrangThai;
 
@@ -49,32 +43,27 @@ public class PhongDialog extends JDialog {
     private final Phong currentPhong;
     private final boolean isEditMode;
 
-    // dữ liệu gốc để so sánh thay đổi
     private String originalMaPhong = "";
     private String originalTenPhong = "";
+    private String originalTang = "";
     private String originalLoaiPhong = "";
     private String originalTrangThai = "";
-    private String originalKhachHienTai = "";
-    private String originalGiaThang = "";
-    private String originalDien = "";
-    private String originalNuoc = "";
-    private String originalDichVu = "";
-    private String originalKyChiSo = "";
 
     public PhongDialog(Frame owner, PhongService service, Phong phong, Runnable onSuccess) {
         super(owner, true);
         this.phongService = service;
         this.onSuccess = onSuccess;
         this.currentPhong = phong;
-        this.isEditMode = (phong != null && phong.getMaPhong() != null && !phong.getMaPhong().isEmpty());
+        this.isEditMode = (phong != null && phong.getMaPhong() != null && !phong.getMaPhong().trim().isEmpty());
 
         setTitle(isEditMode ? "Cập Nhật Phòng" : "Thêm Phòng Mới");
-        setSize(520, 500);
+        setSize(520, 360);
         setLocationRelativeTo(owner);
         setLayout(new BorderLayout());
         getContentPane().setBackground(AppColors.BG);
 
         initComponents();
+        loadTangToComboBox();
         loadLoaiPhongToComboBox();
 
         if (isEditMode) {
@@ -91,20 +80,15 @@ public class PhongDialog extends JDialog {
 
     private void initComponents() {
         RoundedPanel mainPanel = new RoundedPanel(15, Color.WHITE, AppColors.BORDER);
-        mainPanel.setLayout(new GridLayout(10, 2, 10, 15));
+        mainPanel.setLayout(new GridLayout(5, 2, 10, 16));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
 
-        txtMaPhong = new HintTextField("VD: P03");
-        txtTenPhong = new HintTextField("VD: Phòng 103");
-        txtKhachHienTai = new HintTextField("Để trống nếu chưa có khách");
-        txtGiaThang = new HintTextField("VD: 2500000");
-        txtDien = new HintTextField("VD: 0");
-        txtNuoc = new HintTextField("VD: 0");
-        txtDichVu = new HintTextField("VD: 100000");
-        txtKyChiSo = new HintTextField("VD: 2026-03");
+        txtMaPhong = new HintTextField("VD: a1.01");
+        txtTenPhong = new HintTextField("VD: Phòng 101");
 
+        cboTang = new JComboBox<>();
         cboLoaiPhong = new JComboBox<>();
-        cboTrangThai = new JComboBox<>(new String[] { "TRỐNG", "ĐÃ THUÊ", "BẢO TRÌ" });
+        cboTrangThai = new JComboBox<>(new String[] { "TRONG", "ĐÃ THUÊ", "BẢO TRÌ" });
 
         if (isEditMode) {
             txtMaPhong.setEditable(false);
@@ -118,29 +102,14 @@ public class PhongDialog extends JDialog {
         mainPanel.add(new JLabel("Tên Phòng (*):"));
         mainPanel.add(txtTenPhong);
 
+        mainPanel.add(new JLabel("Tầng (*):"));
+        mainPanel.add(cboTang);
+
         mainPanel.add(new JLabel("Loại Phòng (*):"));
         mainPanel.add(cboLoaiPhong);
 
         mainPanel.add(new JLabel("Trạng Thái (*):"));
         mainPanel.add(cboTrangThai);
-
-        mainPanel.add(new JLabel("Khách Hiện Tại:"));
-        mainPanel.add(txtKhachHienTai);
-
-        mainPanel.add(new JLabel("Giá Tháng:"));
-        mainPanel.add(txtGiaThang);
-
-        mainPanel.add(new JLabel("Điện:"));
-        mainPanel.add(txtDien);
-
-        mainPanel.add(new JLabel("Nước:"));
-        mainPanel.add(txtNuoc);
-
-        mainPanel.add(new JLabel("Dịch Vụ:"));
-        mainPanel.add(txtDichVu);
-
-        mainPanel.add(new JLabel("Kỳ Chỉ Số:"));
-        mainPanel.add(txtKyChiSo);
 
         add(mainPanel, BorderLayout.CENTER);
 
@@ -161,14 +130,29 @@ public class PhongDialog extends JDialog {
         add(bottomPanel, BorderLayout.SOUTH);
     }
 
+    private void loadTangToComboBox() {
+        cboTang.removeAllItems();
+
+        List<String> dsTang = phongService.getAllTangIds();
+        if (dsTang != null) {
+            for (String tangId : dsTang) {
+                cboTang.addItem(tangId);
+            }
+        }
+
+        if (cboTang.getItemCount() == 0) {
+            JOptionPane.showMessageDialog(this, "Không có tầng nào trong hệ thống!");
+        }
+    }
+
     private void loadLoaiPhongToComboBox() {
         cboLoaiPhong.removeAllItems();
 
         LoaiPhongService loaiPhongService = new LoaiPhongService();
-        List<LoaiPhong> danhSachLoaiPhong = loaiPhongService.getAllLoaiPhong();
+        List<LoaiPhong> dsLoaiPhong = loaiPhongService.getAllLoaiPhong();
 
-        if (danhSachLoaiPhong != null) {
-            for (LoaiPhong lp : danhSachLoaiPhong) {
+        if (dsLoaiPhong != null) {
+            for (LoaiPhong lp : dsLoaiPhong) {
                 cboLoaiPhong.addItem(lp.getMaLoaiPhong());
             }
         }
@@ -181,27 +165,17 @@ public class PhongDialog extends JDialog {
     private void fillData() {
         txtMaPhong.setActualText(currentPhong.getMaPhong());
         txtTenPhong.setActualText(currentPhong.getTenPhong());
+        cboTang.setSelectedItem(currentPhong.getIdCha());
         cboLoaiPhong.setSelectedItem(currentPhong.getMaLoaiPhong());
         cboTrangThai.setSelectedItem(currentPhong.getTrangThai());
-        txtKhachHienTai.setActualText(currentPhong.getKhachHienTai() == null ? "" : currentPhong.getKhachHienTai());
-        txtGiaThang.setActualText(String.valueOf(currentPhong.getGiaThang()));
-        txtDien.setActualText(String.valueOf(currentPhong.getDien()));
-        txtNuoc.setActualText(String.valueOf(currentPhong.getNuoc()));
-        txtDichVu.setActualText(String.valueOf(currentPhong.getDichVu()));
-        txtKyChiSo.setActualText(currentPhong.getKyChiSo() == null ? "" : currentPhong.getKyChiSo());
     }
 
     private void saveOriginalData() {
         originalMaPhong = txtMaPhong.getText().trim();
         originalTenPhong = txtTenPhong.getText().trim();
+        originalTang = Objects.toString(cboTang.getSelectedItem(), "");
         originalLoaiPhong = Objects.toString(cboLoaiPhong.getSelectedItem(), "");
         originalTrangThai = Objects.toString(cboTrangThai.getSelectedItem(), "");
-        originalKhachHienTai = txtKhachHienTai.getText().trim();
-        originalGiaThang = txtGiaThang.getText().trim();
-        originalDien = txtDien.getText().trim();
-        originalNuoc = txtNuoc.getText().trim();
-        originalDichVu = txtDichVu.getText().trim();
-        originalKyChiSo = txtKyChiSo.getText().trim();
     }
 
     private void addChangeListeners() {
@@ -223,13 +197,8 @@ public class PhongDialog extends JDialog {
         };
 
         txtTenPhong.getDocument().addDocumentListener(listener);
-        txtKhachHienTai.getDocument().addDocumentListener(listener);
-        txtGiaThang.getDocument().addDocumentListener(listener);
-        txtDien.getDocument().addDocumentListener(listener);
-        txtNuoc.getDocument().addDocumentListener(listener);
-        txtDichVu.getDocument().addDocumentListener(listener);
-        txtKyChiSo.getDocument().addDocumentListener(listener);
 
+        cboTang.addActionListener(e -> updateSaveButtonState());
         cboLoaiPhong.addActionListener(e -> updateSaveButtonState());
         cboTrangThai.addActionListener(e -> updateSaveButtonState());
     }
@@ -243,14 +212,9 @@ public class PhongDialog extends JDialog {
         boolean changed =
             !Objects.equals(txtMaPhong.getText().trim(), originalMaPhong) ||
             !Objects.equals(txtTenPhong.getText().trim(), originalTenPhong) ||
+            !Objects.equals(Objects.toString(cboTang.getSelectedItem(), ""), originalTang) ||
             !Objects.equals(Objects.toString(cboLoaiPhong.getSelectedItem(), ""), originalLoaiPhong) ||
-            !Objects.equals(Objects.toString(cboTrangThai.getSelectedItem(), ""), originalTrangThai) ||
-            !Objects.equals(txtKhachHienTai.getText().trim(), originalKhachHienTai) ||
-            !Objects.equals(txtGiaThang.getText().trim(), originalGiaThang) ||
-            !Objects.equals(txtDien.getText().trim(), originalDien) ||
-            !Objects.equals(txtNuoc.getText().trim(), originalNuoc) ||
-            !Objects.equals(txtDichVu.getText().trim(), originalDichVu) ||
-            !Objects.equals(txtKyChiSo.getText().trim(), originalKyChiSo);
+            !Objects.equals(Objects.toString(cboTrangThai.getSelectedItem(), ""), originalTrangThai);
 
         btnSave.setEnabled(changed);
     }
@@ -258,16 +222,6 @@ public class PhongDialog extends JDialog {
     private void savePhong() {
         String maPhong = txtMaPhong.getText().trim();
         String tenPhong = txtTenPhong.getText().trim();
-
-        if (cboLoaiPhong.getSelectedItem() == null) {
-            JOptionPane.showMessageDialog(this, "Vui lòng thêm loại phòng trước!");
-            return;
-        }
-
-        String maLoaiPhong = cboLoaiPhong.getSelectedItem().toString();
-        String trangThai = cboTrangThai.getSelectedItem().toString();
-        String khachHienTai = txtKhachHienTai.getText().trim();
-        String kyChiSo = txtKyChiSo.getText().trim();
 
         if (maPhong.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Mã phòng không được để trống!");
@@ -279,52 +233,55 @@ public class PhongDialog extends JDialog {
             return;
         }
 
-        try {
-            double giaThang = parseDoubleOrZero(txtGiaThang.getText().trim());
-            double dien = parseDoubleOrZero(txtDien.getText().trim());
-            double nuoc = parseDoubleOrZero(txtNuoc.getText().trim());
-            double dichVu = parseDoubleOrZero(txtDichVu.getText().trim());
-
-            if ("TRỐNG".equals(trangThai)) {
-                khachHienTai = null;
-            }
-
-            Phong phong = new Phong();
-            phong.setMaPhong(maPhong);
-            phong.setTenPhong(tenPhong);
-            phong.setMaLoaiPhong(maLoaiPhong);
-            phong.setTrangThai(trangThai);
-            phong.setKhachHienTai(khachHienTai == null || khachHienTai.isBlank() ? null : khachHienTai);
-            phong.setGiaThang(giaThang);
-            phong.setDien(dien);
-            phong.setNuoc(nuoc);
-            phong.setDichVu(dichVu);
-            phong.setKyChiSo(kyChiSo);
-
-            String message;
-            if (isEditMode) {
-                message = phongService.updatePhong(phong);
-            } else {
-                message = phongService.createPhong(phong);
-            }
-
-            JOptionPane.showMessageDialog(this, message);
-
-            if ("Thành công".equals(message)) {
-                if (onSuccess != null) {
-                    onSuccess.run();
-                }
-                dispose();
-            }
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Giá trị số không hợp lệ!");
+        if (cboTang.getSelectedItem() == null) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn tầng!");
+            return;
         }
-    }
 
-    private double parseDoubleOrZero(String value) {
-        if (value == null || value.isBlank()) {
-            return 0;
+        if (cboLoaiPhong.getSelectedItem() == null) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn loại phòng!");
+            return;
         }
-        return Double.parseDouble(value);
+
+        if (cboTrangThai.getSelectedItem() == null) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn trạng thái!");
+            return;
+        }
+
+        String idCha = cboTang.getSelectedItem().toString();
+        String maLoaiPhong = cboLoaiPhong.getSelectedItem().toString();
+        String trangThai = cboTrangThai.getSelectedItem().toString();
+
+        // kiểm tra format mã phòng theo trigger: phải bắt đầu bằng mã tầng + "."
+        if (!maPhong.startsWith(idCha + ".")) {
+            JOptionPane.showMessageDialog(
+                this,
+                "Mã phòng phải đúng định dạng theo tầng.\nVí dụ: tầng " + idCha + " thì mã phòng phải là " + idCha + ".01"
+            );
+            return;
+        }
+
+        Phong phong = new Phong();
+        phong.setMaPhong(maPhong);
+        phong.setTenPhong(tenPhong);
+        phong.setIdCha(idCha);
+        phong.setMaLoaiPhong(maLoaiPhong);
+        phong.setTrangThai(trangThai);
+
+        String message;
+        if (isEditMode) {
+            message = phongService.updatePhong(phong);
+        } else {
+            message = phongService.createPhong(phong);
+        }
+
+        JOptionPane.showMessageDialog(this, message);
+
+        if ("Thành công".equals(message)) {
+            if (onSuccess != null) {
+                onSuccess.run();
+            }
+            dispose();
+        }
     }
 }

@@ -48,11 +48,11 @@ public class PhongUI extends JPanel {
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         UITheme.stylePage(this);
 
-        txtSearch = new HintTextField("Tìm theo tên khách...");
+        txtSearch = new HintTextField("Tìm theo tên phòng...");
         cboLoai = new JComboBox<>();
         cboStatus = new JComboBox<>(new String[] {
             "Tất cả trạng thái",
-            "TRỐNG",
+            "TRONG",
             "ĐÃ THUÊ",
             "BẢO TRÌ"
         });
@@ -115,14 +115,12 @@ public class PhongUI extends JPanel {
 
         model = new DefaultTableModel(
             new String[] {
-                "Mã phòng", "Tên phòng", "Loại", "Trạng thái",
-                "Khách hiện tại", "Giá tháng", "Điện", "Nước",
-                "Dịch vụ", "Kỳ chỉ số", "Hành động"
+                "Mã phòng", "Tên phòng", "Loại", "Trạng thái", "Tầng", "Hành động"
             }, 0
         ) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 10;
+                return column == 5;
             }
         };
 
@@ -130,15 +128,15 @@ public class PhongUI extends JPanel {
         UITheme.styleTable(table);
         table.setRowHeight(38);
 
-        table.getColumnModel().getColumn(10).setPreferredWidth(140);
-        table.getColumnModel().getColumn(10).setMinWidth(140);
-        table.getColumnModel().getColumn(10).setMaxWidth(160);
+        table.getColumnModel().getColumn(5).setPreferredWidth(140);
+        table.getColumnModel().getColumn(5).setMinWidth(140);
+        table.getColumnModel().getColumn(5).setMaxWidth(160);
 
         sorter = new TableRowSorter<>(model);
         table.setRowSorter(sorter);
 
-        table.getColumnModel().getColumn(10).setCellRenderer(new TableActionCell.Renderer());
-        table.getColumnModel().getColumn(10).setCellEditor(new TableActionCell(new TableActionCell.TableActionEvent() {
+        table.getColumnModel().getColumn(5).setCellRenderer(new TableActionCell.Renderer());
+        table.getColumnModel().getColumn(5).setCellEditor(new TableActionCell(new TableActionCell.TableActionEvent() {
             @Override
             public void onDelete(int row) {
                 int modelRow = table.convertRowIndexToModel(row);
@@ -183,12 +181,7 @@ public class PhongUI extends JPanel {
                     p.getTenPhong(),
                     p.getMaLoaiPhong(),
                     p.getTrangThai(),
-                    p.getKhachHienTai(),
-                    p.getGiaThang(),
-                    p.getDien(),
-                    p.getNuoc(),
-                    p.getDichVu(),
-                    p.getKyChiSo(),
+                    p.getIdCha(),
                     ""
                 });
             }
@@ -231,24 +224,24 @@ public class PhongUI extends JPanel {
         sorter.setRowFilter(new RowFilter<DefaultTableModel, Integer>() {
             @Override
             public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
-                String khachHienTaiRow = entry.getStringValue(4);
+                String tenPhongRow = entry.getStringValue(1);
                 String loaiRow = entry.getStringValue(2);
                 String trangThaiRow = entry.getStringValue(3);
 
-                if (khachHienTaiRow == null) {
-                    khachHienTaiRow = "";
+                if (tenPhongRow == null) {
+                    tenPhongRow = "";
                 }
 
-                boolean matchKhach = keyword.isEmpty()
-                        || khachHienTaiRow.toLowerCase().contains(keyword.toLowerCase());
+                boolean matchTenPhong = keyword.isEmpty()
+                        || tenPhongRow.toLowerCase().contains(keyword.toLowerCase());
 
                 boolean matchLoai = selectedLoai.equals("Tất cả loại")
                         || loaiRow.equals(selectedLoai);
 
                 boolean matchTrangThai = selectedStatus.equals("Tất cả trạng thái")
-                        || trangThaiRow.equals(selectedStatus);
+                        || trangThaiRow.equalsIgnoreCase(selectedStatus);
 
-                return matchKhach && matchLoai && matchTrangThai;
+                return matchTenPhong && matchLoai && matchTrangThai;
             }
         });
     }

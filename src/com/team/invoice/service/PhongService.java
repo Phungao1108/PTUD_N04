@@ -18,6 +18,15 @@ public class PhongService {
         }
     }
 
+    public List<String> getAllTangIds() {
+        try {
+            return dao.findAllTangIds();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
     public String createPhong(Phong p) {
         try {
             if (dao.existsByMaPhong(p.getMaPhong())) {
@@ -29,13 +38,13 @@ public class PhongService {
             }
 
             boolean ok = dao.insert(p);
-            return ok ? "Thành công" : "Không thể thêm phòng";
+            return ok ? "Thành công" : "Không thể thêm phòng!";
         } catch (SQLException e) {
             e.printStackTrace();
-            return "Lỗi hệ thống khi thêm phòng!";
+            return "Lỗi SQL: " + e.getMessage();
         } catch (Exception e) {
             e.printStackTrace();
-            return "Lỗi hệ thống khi thêm phòng!";
+            return "Lỗi: " + e.getMessage();
         }
     }
 
@@ -46,20 +55,26 @@ public class PhongService {
             }
 
             boolean ok = dao.update(p);
-            return ok ? "Thành công" : "Không thể cập nhật phòng";
+            return ok ? "Thành công" : "Không thể cập nhật phòng!";
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return "Lỗi SQL: " + e.getMessage();
         } catch (Exception e) {
             e.printStackTrace();
-            return "Lỗi hệ thống khi cập nhật phòng!";
+            return "Lỗi: " + e.getMessage();
         }
     }
 
     public String deletePhong(String maPhong) {
         try {
             boolean ok = dao.delete(maPhong);
-            return ok ? "Thành công" : "Không thể xóa phòng";
+            return ok ? "Thành công" : "Không thể xóa phòng!";
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return "Lỗi SQL: " + e.getMessage();
         } catch (Exception e) {
             e.printStackTrace();
-            return "Lỗi hệ thống khi xóa phòng!";
+            return "Lỗi: " + e.getMessage();
         }
     }
 }

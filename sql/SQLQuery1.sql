@@ -143,7 +143,7 @@ CREATE INDEX IX_KhachThue_CCCD ON KhachThue(soCCCD);
 CREATE INDEX IX_HoaDon_Ky ON HoaDon(ky);
 
 GO
-CREATE VIEW v_HoaDonTong Hop AS
+CREATE VIEW v_HoaDonTong AS
 SELECT 
     h.maHoaDon, h.maPhong, h.ky, h.ngayLap, h.trangThai,
     ISNULL(SUM(ct.thanhTien), 0) AS TongTienThanhToan
@@ -192,3 +192,27 @@ VALUES ('CS01', 'a1.01', '03/2026', 1000, 1150, 50, 58);
 INSERT INTO HoaDon (maHoaDon, maPhong, maTK_NguoiLap, ky) VALUES ('INV01', 'a1.01', 'TK01', '03/2026');
 INSERT INTO ChiTietHoaDon VALUES ('CT01', 'INV01', N'Tiền nhà', 1, 5000000);
 INSERT INTO ChiTietHoaDon VALUES ('CT02', 'INV01', N'Tiền điện (150 số)', 150, 3500);
+
+-- =============================================
+-- P/S
+-- =============================================
+
+CREATE TABLE Phong (
+    maPhong VARCHAR(50) PRIMARY KEY,
+    tenPhong NVARCHAR(100) NOT NULL,
+    maLoaiPhong VARCHAR(50) NOT NULL,
+    trangThai NVARCHAR(20) DEFAULT N'TRỐNG',
+    khachHienTai NVARCHAR(100) NULL,
+    giaThang DECIMAL(18,2) DEFAULT 0,
+    dien DECIMAL(18,2) DEFAULT 0,
+    nuoc DECIMAL(18,2) DEFAULT 0,
+    dichVu DECIMAL(18,2) DEFAULT 0,
+    kyChiSo NVARCHAR(20) NULL,
+    isDeleted BIT DEFAULT 0,
+
+    CONSTRAINT FK_Phong_LoaiPhong
+        FOREIGN KEY (maLoaiPhong) REFERENCES LoaiPhong(maLoaiPhong)
+);
+
+ALTER TABLE Phong
+ADD CONSTRAINT UQ_Phong_tenPhong UNIQUE (tenPhong);
