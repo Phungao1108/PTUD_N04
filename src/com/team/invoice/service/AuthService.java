@@ -3,7 +3,7 @@ package com.team.invoice.service;
 import java.sql.*;
 
 public class AuthService {
-    private static final String DB_URL = "jdbc:sqlserver://localhost:1433;databaseName=master;user=sa;password=sapassword;encrypt=true;trustServerCertificate=true;";
+    private static final String DB_URL = "jdbc:sqlserver://localhost:1433;databaseName=MiniApart;user=sa;password=sapassword;encrypt=true;trustServerCertificate=true;";
     private static final String DB_USER = "sa";
     private static final String DB_PASS = "sapassword";
 

@@ -6,7 +6,7 @@ import java.sql.SQLException;
 
 public class DBConnection {
     // Thay đổi thông tin kết nối phù hợp với máy của bạn
-    private static final String DB_URL = "jdbc:sqlserver://localhost:1433;databaseName=master;user=sa;password=sapassword;encrypt=true;trustServerCertificate=true;";
+    private static final String DB_URL = "jdbc:sqlserver://localhost:1433;databaseName=MiniApart;user=sa;password=sapassword;encrypt=true;trustServerCertificate=true;";
     
     // Nạp driver JDBC (chỉ cần chạy 1 lần)
     static {
