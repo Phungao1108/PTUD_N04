@@ -14,9 +14,42 @@ public class HopDongService {
     public boolean taoHopDong(HopDong hd) throws SQLException {
         boolean ok = hopDongDAO.insert(hd);
         if (ok) {
-            capNhatTrangThaiPhong(hd.getMaPhong(), "DA_THUE");
+            dongBoTrangThaiPhong(hd.getMaPhong(), hd.getTrangThai());
         }
         return ok;
+    }
+
+    public boolean capNhatHopDong(HopDong hd) throws SQLException {
+        String oldRoom = hopDongDAO.findRoomByContractId(hd.getMaHopDong());
+        String oldStatus = hopDongDAO.findStatusByContractId(hd.getMaHopDong());
+
+        boolean ok = hopDongDAO.update(hd);
+        if (ok) {
+            if (oldRoom != null && !oldRoom.equals(hd.getMaPhong()) && "HIEU_LUC".equals(oldStatus)) {
+                capNhatTrangThaiPhong(oldRoom, "TRONG");
+            }
+            dongBoTrangThaiPhong(hd.getMaPhong(), hd.getTrangThai());
+        }
+        return ok;
+    }
+
+    public boolean xoaHopDong(String maHopDong) throws SQLException {
+        String oldRoom = hopDongDAO.findRoomByContractId(maHopDong);
+        String oldStatus = hopDongDAO.findStatusByContractId(maHopDong);
+
+        boolean ok = hopDongDAO.softDelete(maHopDong);
+        if (ok && oldRoom != null && "HIEU_LUC".equals(oldStatus)) {
+            capNhatTrangThaiPhong(oldRoom, "TRONG");
+        }
+        return ok;
+    }
+
+    private void dongBoTrangThaiPhong(String maPhong, String trangThaiHopDong) throws SQLException {
+        if ("HIEU_LUC".equals(trangThaiHopDong)) {
+            capNhatTrangThaiPhong(maPhong, "DA_THUE");
+        } else {
+            capNhatTrangThaiPhong(maPhong, "TRONG");
+        }
     }
 
     private void capNhatTrangThaiPhong(String maPhong, String trangThai) throws SQLException {
