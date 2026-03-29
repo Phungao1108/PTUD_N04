@@ -194,25 +194,118 @@ INSERT INTO ChiTietHoaDon VALUES ('CT01', 'INV01', N'Tiền nhà', 1, 5000000);
 INSERT INTO ChiTietHoaDon VALUES ('CT02', 'INV01', N'Tiền điện (150 số)', 150, 3500);
 
 -- =============================================
--- P/S
+-- 5. FIX TRIGGER
 -- =============================================
 
-CREATE TABLE Phong (
-    maPhong VARCHAR(50) PRIMARY KEY,
-    tenPhong NVARCHAR(100) NOT NULL,
-    maLoaiPhong VARCHAR(50) NOT NULL,
-    trangThai NVARCHAR(20) DEFAULT N'TRỐNG',
-    khachHienTai NVARCHAR(100) NULL,
-    giaThang DECIMAL(18,2) DEFAULT 0,
-    dien DECIMAL(18,2) DEFAULT 0,
-    nuoc DECIMAL(18,2) DEFAULT 0,
-    dichVu DECIMAL(18,2) DEFAULT 0,
-    kyChiSo NVARCHAR(20) NULL,
-    isDeleted BIT DEFAULT 0,
+GO
+ALTER TRIGGER trg_ValidateRoomID
+ON CoSoVatChat
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
 
-    CONSTRAINT FK_Phong_LoaiPhong
-        FOREIGN KEY (maLoaiPhong) REFERENCES LoaiPhong(maLoaiPhong)
-);
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        LEFT JOIN CoSoVatChat cha ON i.idCha = cha.id
+        WHERE i.loai = 'PHONG'
+          AND (
+                cha.id IS NULL
+                OR cha.loai <> 'TANG'
+                OR i.id NOT LIKE cha.id + '.%'
+              )
+    )
+    BEGIN
+        RAISERROR (N'Mã phòng phải có dạng [MãTầng].[SốPhòng] và phải thuộc một tầng hợp lệ!', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+END;
+GO
 
-ALTER TABLE Phong
-ADD CONSTRAINT UQ_Phong_tenPhong UNIQUE (tenPhong);
+-- =============================================
+-- 6. BỔ SUNG LOẠI PHÒNG
+-- =============================================
+
+IF NOT EXISTS (SELECT 1 FROM LoaiPhong WHERE maLoaiPhong = 'LP02')
+BEGIN
+    INSERT INTO LoaiPhong VALUES ('LP02', N'Phòng Thường', 20.0, N'Phòng tiêu chuẩn', 0);
+END
+GO
+
+-- =============================================
+-- 7. BỔ SUNG KHU A, KHU B VÀ 4 TẦNG MỖI KHU
+-- =============================================
+
+-- Khu A
+IF NOT EXISTS (SELECT 1 FROM CoSoVatChat WHERE id = 'a')
+BEGIN
+    INSERT INTO CoSoVatChat (id, ten, loai, idCha)
+    VALUES ('a', N'Khu A', 'KHU_VUC', NULL);
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM CoSoVatChat WHERE id = 'a1')
+BEGIN
+    INSERT INTO CoSoVatChat (id, ten, loai, idCha)
+    VALUES ('a1', N'Tầng 1', 'TANG', 'a');
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM CoSoVatChat WHERE id = 'a2')
+BEGIN
+    INSERT INTO CoSoVatChat (id, ten, loai, idCha)
+    VALUES ('a2', N'Tầng 2', 'TANG', 'a');
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM CoSoVatChat WHERE id = 'a3')
+BEGIN
+    INSERT INTO CoSoVatChat (id, ten, loai, idCha)
+    VALUES ('a3', N'Tầng 3', 'TANG', 'a');
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM CoSoVatChat WHERE id = 'a4')
+BEGIN
+    INSERT INTO CoSoVatChat (id, ten, loai, idCha)
+    VALUES ('a4', N'Tầng 4', 'TANG', 'a');
+END
+GO
+
+-- Khu B
+IF NOT EXISTS (SELECT 1 FROM CoSoVatChat WHERE id = 'b')
+BEGIN
+    INSERT INTO CoSoVatChat (id, ten, loai, idCha)
+    VALUES ('b', N'Khu B', 'KHU_VUC', NULL);
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM CoSoVatChat WHERE id = 'b1')
+BEGIN
+    INSERT INTO CoSoVatChat (id, ten, loai, idCha)
+    VALUES ('b1', N'Tầng 1', 'TANG', 'b');
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM CoSoVatChat WHERE id = 'b2')
+BEGIN
+    INSERT INTO CoSoVatChat (id, ten, loai, idCha)
+    VALUES ('b2', N'Tầng 2', 'TANG', 'b');
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM CoSoVatChat WHERE id = 'b3')
+BEGIN
+    INSERT INTO CoSoVatChat (id, ten, loai, idCha)
+    VALUES ('b3', N'Tầng 3', 'TANG', 'b');
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM CoSoVatChat WHERE id = 'b4')
+BEGIN
+    INSERT INTO CoSoVatChat (id, ten, loai, idCha)
+    VALUES ('b4', N'Tầng 4', 'TANG', 'b');
+END
+GO
