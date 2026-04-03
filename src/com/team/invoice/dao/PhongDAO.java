@@ -1,5 +1,6 @@
 package com.team.invoice.dao;
 
+import com.team.invoice.entity.DonVi;
 import com.team.invoice.entity.Phong;
 import com.team.invoice.util.DBConnection;
 
@@ -16,10 +17,15 @@ public class PhongDAO {
         List<Phong> list = new ArrayList<>();
 
         String sql = """
-            SELECT id, ten, maLoaiPhong, trangThaiPhong, idCha, isDeleted
-            FROM CoSoVatChat
-            WHERE loai = 'PHONG' AND isDeleted = 0
-            ORDER BY id
+            SELECT p.id, p.ten, p.maLoaiPhong, p.trangThaiPhong, p.idCha,
+                   t.ten AS tenTang,
+                   k.ten AS tenKhuVuc,
+                   p.isDeleted
+            FROM CoSoVatChat p
+            LEFT JOIN CoSoVatChat t ON t.id = p.idCha AND t.loai = 'TANG'
+            LEFT JOIN CoSoVatChat k ON k.id = t.idCha AND k.loai = 'KHU_VUC'
+            WHERE p.loai = 'PHONG' AND p.isDeleted = 0
+            ORDER BY p.id
         """;
 
         try (Connection conn = DBConnection.getConnection();
@@ -27,14 +33,17 @@ public class PhongDAO {
              ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
-                list.add(new Phong(
+                Phong phong = new Phong(
                     rs.getString("id"),
                     rs.getString("ten"),
                     rs.getString("maLoaiPhong"),
                     rs.getString("trangThaiPhong"),
                     rs.getString("idCha"),
                     rs.getBoolean("isDeleted")
-                ));
+                );
+                phong.setTenTang(rs.getString("tenTang"));
+                phong.setTenKhuVuc(rs.getString("tenKhuVuc"));
+                list.add(phong);
             }
         }
 
@@ -141,6 +150,55 @@ public class PhongDAO {
         }
     }
 
+    // Lấy danh sách khu vực
+    public List<DonVi> findAllKhuVuc() throws SQLException {
+        List<DonVi> list = new ArrayList<>();
+
+        String sql = """
+            SELECT id, ten
+            FROM CoSoVatChat
+            WHERE loai = 'KHU_VUC' AND isDeleted = 0
+            ORDER BY id
+        """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                list.add(new DonVi(rs.getString("id"), rs.getString("ten")));
+            }
+        }
+
+        return list;
+    }
+
+    // Lấy danh sách tầng theo khu vực
+    public List<DonVi> findTangByKhuVuc(String khuVucId) throws SQLException {
+        List<DonVi> list = new ArrayList<>();
+
+        String sql = """
+            SELECT id, ten
+            FROM CoSoVatChat
+            WHERE loai = 'TANG' AND idCha = ? AND isDeleted = 0
+            ORDER BY id
+        """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, khuVucId);
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                list.add(new DonVi(rs.getString("id"), rs.getString("ten")));
+            }
+        }
+
+        return list;
+    }
+
+    // Giữ lại để không break code cũ
     public List<String> findAllTangIds() throws SQLException {
         List<String> list = new ArrayList<>();
 

@@ -52,9 +52,9 @@ public class PhongUI extends JPanel {
         cboLoai = new JComboBox<>();
         cboStatus = new JComboBox<>(new String[] {
             "Tất cả trạng thái",
-            "TRONG",
-            "ĐÃ THUÊ",
-            "BẢO TRÌ"
+            "Trống",
+            "Đang thuê",
+            "Bảo trì"
         });
 
         loadLoaiPhongToComboBox();
@@ -115,7 +115,7 @@ public class PhongUI extends JPanel {
 
         model = new DefaultTableModel(
             new String[] {
-                "Mã phòng", "Tên phòng", "Loại", "Trạng thái", "Tầng", "Hành động"
+                "Mã phòng", "Tên phòng", "Loại", "Trạng thái", "Khu vực", "Hành động"
             }, 0
         ) {
             @Override
@@ -180,8 +180,8 @@ public class PhongUI extends JPanel {
                     p.getMaPhong(),
                     p.getTenPhong(),
                     p.getMaLoaiPhong(),
-                    p.getTrangThai(),
-                    p.getIdCha(),
+                    mapTrangThai(p.getTrangThai()),
+                    p.getTenKhuVuc() + " - " + p.getTenTang(),
                     ""
                 });
             }
@@ -239,10 +239,20 @@ public class PhongUI extends JPanel {
                         || loaiRow.equals(selectedLoai);
 
                 boolean matchTrangThai = selectedStatus.equals("Tất cả trạng thái")
-                        || trangThaiRow.equalsIgnoreCase(selectedStatus);
+                        || trangThaiRow.equals(selectedStatus);
 
                 return matchTenPhong && matchLoai && matchTrangThai;
             }
         });
+    }
+
+    private String mapTrangThai(String value) {
+        if (value == null) return "";
+        return switch (value) {
+            case "TRONG" -> "Trống";
+            case "DANG_THUE" -> "Đang thuê";
+            case "BAO_TRI" -> "Bảo trì";
+            default -> value;
+        };
     }
 }
