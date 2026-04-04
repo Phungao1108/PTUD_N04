@@ -7,8 +7,6 @@ public class Phong {
     private String trangThai;    // map với CoSoVatChat.trangThaiPhong
     private String idCha;        // tầng cha
     private boolean isDeleted;
-    private String tenTang;
-    private String tenKhuVuc;
 
     public Phong() {
     }
@@ -68,21 +66,5 @@ public class Phong {
 
     public void setDeleted(boolean deleted) {
         isDeleted = deleted;
-    }
-
-    public String getTenTang() {
-        return tenTang != null ? tenTang : "";
-    }
-
-    public void setTenTang(String tenTang) {
-        this.tenTang = tenTang;
-    }
-
-    public String getTenKhuVuc() {
-        return tenKhuVuc != null ? tenKhuVuc : "";
-    }
-
-    public void setTenKhuVuc(String tenKhuVuc) {
-        this.tenKhuVuc = tenKhuVuc;
     }
 }
