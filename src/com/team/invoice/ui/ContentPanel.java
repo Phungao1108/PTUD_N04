@@ -26,7 +26,7 @@ public class ContentPanel extends JPanel {
         addPanel("Dịch vụ", new DichvuUI());
         addPanel("Bảng giá", new BangGiaUI());
         addPanel("Đơn giá", new DonGiaUI());
-        addPanel("Hóa đơn", new JLabel("Màn hình Hóa đơn", SwingConstants.CENTER));
+        addPanel("Hóa đơn", new HoaDonUI());
         addPanel("Hợp đồng", new HopDongUI());
         addPanel("Khách thuê", new KhachThueUI());
         addPanel("Cài đặt", new JLabel("Màn hình Cài đặt", SwingConstants.CENTER));
