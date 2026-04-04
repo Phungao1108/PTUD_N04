@@ -36,7 +36,7 @@ import com.team.invoice.entity.Room;
 import com.team.invoice.util.CurrencyUtils;
 
 public class CreateInvoiceDialog extends JDialog {
-    private JComboBox<String> cboPeriod;
+    private JTextField txtPeriod;
     private JComboBox<Room> cboRoom;
     private JTextField txtOldElectric;
     private JTextField txtNewElectric;
@@ -95,7 +95,8 @@ public class CreateInvoiceDialog extends JDialog {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.anchor = GridBagConstraints.WEST;
 
-        cboPeriod = new JComboBox<String>(new String[]{"10/2023", "11/2023", "12/2023", "01/2024"});
+        txtPeriod = createInputField();
+        txtPeriod.setText(new java.text.SimpleDateFormat("MM/yyyy").format(new Date()));
         cboRoom = new JComboBox<Room>(rooms.toArray(new Room[0]));
         txtOldElectric = createReadOnlyField();
         txtNewElectric = createInputField();
@@ -114,7 +115,6 @@ public class CreateInvoiceDialog extends JDialog {
         txtNote.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
         txtNote.setBackground(Color.WHITE);
 
-        styleCombo(cboPeriod);
         styleCombo(cboRoom);
 
         lblRoomFee = createMoneyLabel();
@@ -125,7 +125,7 @@ public class CreateInvoiceDialog extends JDialog {
         lblTotal.setForeground(AppColors.PRIMARY);
         lblTotal.setFont(new Font("SansSerif", Font.BOLD, 18));
 
-        addField(form, gbc, 0, "Kỳ hóa đơn", cboPeriod);
+        addField(form, gbc, 0, "Kỳ hóa đơn (MM/yyyy)", txtPeriod);
         addField(form, gbc, 1, "Phòng/căn", cboRoom);
         addField(form, gbc, 2, "Chỉ số điện cũ", txtOldElectric);
         addField(form, gbc, 3, "Chỉ số điện mới", txtNewElectric);
@@ -337,7 +337,7 @@ public class CreateInvoiceDialog extends JDialog {
 
     public InvoiceFormData getFormData() {
         InvoiceFormData data = new InvoiceFormData();
-        data.setPeriod((String) cboPeriod.getSelectedItem());
+        data.setPeriod(txtPeriod.getText());
         data.setRoom((Room) cboRoom.getSelectedItem());
         data.setNewElectric(parseInt(txtNewElectric.getText(), "Chỉ số điện mới"));
         data.setNewWater(parseInt(txtNewWater.getText(), "Chỉ số nước mới"));
