@@ -96,6 +96,17 @@ CREATE TABLE HopDong (
 );
 GO
 
+CREATE TABLE HopDongKhachThue (
+    maHopDong VARCHAR(50) NOT NULL,
+    maKhach VARCHAR(50) NOT NULL,
+    vaiTro VARCHAR(20) DEFAULT 'PHU',
+    ngayThem DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (maHopDong, maKhach),
+    FOREIGN KEY (maHopDong) REFERENCES HopDong(maHopDong),
+    FOREIGN KEY (maKhach) REFERENCES KhachThue(maKhach)
+);
+GO
+
 CREATE TABLE ChiPhi (
     maCS VARCHAR(50) PRIMARY KEY,
     maPhong VARCHAR(50) NOT NULL,
@@ -300,6 +311,14 @@ VALUES
 ('HD02', 'a1.02', 'KT02', '2026-01-01', '2026-12-31', 3000000, 'HIEU_LUC', 0),
 ('HD03', 'a1.03', 'KT03', '2026-02-01', '2026-12-31', 2000000, 'HIEU_LUC', 0),
 ('HD04', 'b1.01', 'KT05', '2026-03-01', '2027-03-01', 2500000, 'HIEU_LUC', 0);
+GO
+
+-- ===== KHÁCH PHỤ HỢP ĐỒNG =====
+INSERT INTO HopDongKhachThue (maHopDong, maKhach, vaiTro)
+VALUES
+('HD01', 'KT06', 'PHU'),
+('HD01', 'KT07', 'PHU'),
+('HD02', 'KT08', 'PHU');
 GO
 
 -- ===== CHỈ SỐ / CHI PHÍ =====
