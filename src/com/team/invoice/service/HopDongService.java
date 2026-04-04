@@ -46,7 +46,7 @@ public class HopDongService {
 
     private void dongBoTrangThaiPhong(String maPhong, String trangThaiHopDong) throws SQLException {
         if ("HIEU_LUC".equals(trangThaiHopDong)) {
-            capNhatTrangThaiPhong(maPhong, "DA_THUE");
+            capNhatTrangThaiPhong(maPhong, "DANG_THUE");
         } else {
             capNhatTrangThaiPhong(maPhong, "TRONG");
         }
