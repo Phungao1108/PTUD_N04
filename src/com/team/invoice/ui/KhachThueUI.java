@@ -160,13 +160,31 @@ public class KhachThueUI extends JPanel {
     private void showKhachDialog(KhachThue data) {
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), true);
         dialog.setTitle(data == null ? "Thêm Khách thuê" : "Cập nhật Khách thuê");
-        dialog.setSize(520, 360);
+        dialog.setSize(620, 520);
         dialog.setLocationRelativeTo(this);
         dialog.setLayout(new BorderLayout());
 
-        JPanel form = new JPanel(new GridLayout(5, 2, 10, 12));
-        form.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        form.setBackground(Color.WHITE);
+        RoundedPanel wrapper = UITheme.createCard();
+        wrapper.setLayout(new BorderLayout(0, 18));
+        wrapper.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
+
+        JPanel heading = new JPanel();
+        heading.setOpaque(false);
+        heading.setLayout(new BoxLayout(heading, BoxLayout.Y_AXIS));
+        JLabel title = new JLabel(data == null ? "Thêm khách thuê" : "Cập nhật khách thuê");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        JLabel desc = new JLabel("Kiểm tra CCCD, số điện thoại và chuẩn hóa họ tên trước khi lưu.");
+        desc.setForeground(new Color(105, 117, 134));
+        heading.add(title);
+        heading.add(Box.createVerticalStrut(6));
+        heading.add(desc);
+
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setOpaque(false);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(8, 0, 8, 0);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1;
 
         JTextField txtMaKhach = new JTextField();
         JTextField txtHoTen = new JTextField();
@@ -178,11 +196,12 @@ public class KhachThueUI extends JPanel {
         UITheme.styleTextField(txtHoTen);
         UITheme.styleTextField(txtCCCD);
         UITheme.styleTextField(txtSDT);
-        UITheme.styleCombo(cboTrangThai, 250);
+        UITheme.styleCombo(cboTrangThai, 280);
+        txtMaKhach.setEditable(false);
+        txtMaKhach.setBackground(new Color(245, 247, 250));
 
         if (data != null) {
             txtMaKhach.setText(data.getMaKhach());
-            txtMaKhach.setEditable(false);
             txtHoTen.setText(data.getHoTen());
             txtCCCD.setText(data.getSoCCCD());
             txtSDT.setText(data.getSdt());
@@ -191,28 +210,37 @@ public class KhachThueUI extends JPanel {
             txtMaKhach.setText("KT" + System.currentTimeMillis());
         }
 
-        form.add(new JLabel("Mã khách:"));
-        form.add(txtMaKhach);
-        form.add(new JLabel("Họ tên:"));
-        form.add(txtHoTen);
-        form.add(new JLabel("CCCD:"));
-        form.add(txtCCCD);
-        form.add(new JLabel("SĐT:"));
-        form.add(txtSDT);
-        form.add(new JLabel("Trạng thái:"));
-        form.add(cboTrangThai);
+        txtHoTen.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusLost(java.awt.event.FocusEvent e) {
+                txtHoTen.setText(Validate.normalizePersonName(txtHoTen.getText()));
+            }
+        });
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
-        actions.setBackground(Color.WHITE);
+        addField(form, gbc, 0, "Họ tên", txtHoTen, "Ví dụ: Nguyễn Văn An");
+        addField(form, gbc, 1, "Mã khách", txtMaKhach, "Mã tự sinh và chỉ đọc");
+        addField(form, gbc, 2, "CCCD", txtCCCD, "Gồm đúng 12 chữ số");
+        addField(form, gbc, 3, "Số điện thoại", txtSDT, "Gồm 10 chữ số, bắt đầu bằng 0");
+        addField(form, gbc, 4, "Trạng thái", cboTrangThai, "ACTIVE hoặc INACTIVE");
 
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        actions.setOpaque(false);
         RoundedButton btnCancel = UITheme.secondaryButton("Hủy");
         RoundedButton btnSave = UITheme.primaryButton("Lưu");
 
         btnCancel.addActionListener(e -> dialog.dispose());
         btnSave.addActionListener(e -> {
             try {
-                if (txtHoTen.getText().trim().isEmpty() || txtCCCD.getText().trim().isEmpty()) {
-                    JOptionPane.showMessageDialog(dialog, "Họ tên và CCCD không được để trống");
+                txtHoTen.setText(Validate.normalizePersonName(txtHoTen.getText()));
+                String error = Validate.validateKhachThue(
+                        khachThueDAO,
+                        data == null ? null : data.getMaKhach(),
+                        txtHoTen.getText(),
+                        txtCCCD.getText().trim(),
+                        txtSDT.getText().trim()
+                );
+                if (error != null) {
+                    JOptionPane.showMessageDialog(dialog, error);
                     return;
                 }
 
@@ -238,8 +266,32 @@ public class KhachThueUI extends JPanel {
         actions.add(btnCancel);
         actions.add(btnSave);
 
-        dialog.add(form, BorderLayout.CENTER);
-        dialog.add(actions, BorderLayout.SOUTH);
+        wrapper.add(heading, BorderLayout.NORTH);
+        JScrollPane scrollPane = new JScrollPane(form);
+        scrollPane.setBorder(null);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
+        wrapper.add(scrollPane, BorderLayout.CENTER);
+        wrapper.add(actions, BorderLayout.SOUTH);
+        dialog.add(wrapper, BorderLayout.CENTER);
         dialog.setVisible(true);
+    }
+
+    private void addField(JPanel form, GridBagConstraints gbc, int row, String labelText, JComponent field, String helper) {
+        gbc.gridy = row * 2;
+        JLabel label = new JLabel(labelText);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        form.add(label, gbc);
+
+        gbc.gridy = row * 2 + 1;
+        JPanel wrap = new JPanel(new BorderLayout(0, 4));
+        wrap.setOpaque(false);
+        wrap.add(field, BorderLayout.NORTH);
+        JLabel helperText = new JLabel(helper);
+        helperText.setForeground(new Color(120, 130, 145));
+        helperText.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        wrap.add(helperText, BorderLayout.SOUTH);
+        form.add(wrap, gbc);
     }
 }
