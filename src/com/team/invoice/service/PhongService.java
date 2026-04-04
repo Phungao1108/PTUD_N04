@@ -1,7 +1,6 @@
 package com.team.invoice.service;
 
 import com.team.invoice.dao.PhongDAO;
-import com.team.invoice.entity.DonVi;
 import com.team.invoice.entity.Phong;
 
 import java.sql.SQLException;
@@ -22,24 +21,6 @@ public class PhongService {
     public List<String> getAllTangIds() {
         try {
             return dao.findAllTangIds();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    public List<DonVi> getAllKhuVuc() {
-        try {
-            return dao.findAllKhuVuc();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    public List<DonVi> getTangByKhuVuc(String khuVucId) {
-        try {
-            return dao.findTangByKhuVuc(khuVucId);
         } catch (Exception e) {
             e.printStackTrace();
             return null;
