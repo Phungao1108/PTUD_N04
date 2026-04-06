@@ -17,16 +17,20 @@ import com.team.invoice.components.TableActionCell;
 import com.team.invoice.components.UITheme;
 import com.team.invoice.dialog.DichVuDialog;
 import com.team.invoice.entity.DichVu;
+import com.team.invoice.service.BangGiaService;
 import com.team.invoice.service.DichVuService;
 
 public class DichvuUI extends JPanel {
     private JTable table;
     private DefaultTableModel tableModel;
     private DichVuService dichVuService;
+    private BangGiaService bangGiaService; // Khai báo thêm BangGiaService
     private List<DichVu> currentList;
 
     public DichvuUI() {
         dichVuService = new DichVuService();
+        bangGiaService = new BangGiaService(); // Khởi tạo Service lấy giá
+        
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         UITheme.stylePage(this);
 
@@ -44,7 +48,7 @@ public class DichvuUI extends JPanel {
 
     private RoundedButton createAddButton() {
         RoundedButton btnAdd = UITheme.primaryButton("Thêm Dịch Vụ");
-        btnAdd.addActionListener(e -> showDichVuDialog(null)); // Truyền null để báo là thêm mới
+        btnAdd.addActionListener(e -> showDichVuDialog(null)); 
         return btnAdd;
     }
 
@@ -52,21 +56,22 @@ public class DichvuUI extends JPanel {
         RoundedPanel card = UITheme.createCard();
         card.setLayout(new BorderLayout(0, 16));
 
-        String[] cols = {"Mã Dịch Vụ", "Tên Dịch Vụ", "Đơn Vị", "Loại", "Hành Động"};
+        // Đã thêm cột "Đơn Giá Hiện Tại"
+        String[] cols = {"Mã Dịch Vụ", "Tên Dịch Vụ", "Đơn Vị", "Loại", "Đơn Giá Hiện Tại", "Hành Động"};
         tableModel = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 4; // Chỉ cho phép click vào cột Hành Động
+                return column == 5; // Cột Hành Động dịch sang index 5
             }
         };
 
         table = new JTable(tableModel);
         UITheme.styleTable(table);
-        table.setRowHeight(40); // Tăng chiều cao dòng để chứa vừa nút bấm
+        table.setRowHeight(40); 
 
-        // Gắn Renderer và Editor (nút Sửa/Xóa) vào cột 4 (cột cuối)
-        table.getColumnModel().getColumn(4).setCellRenderer(new TableActionCell.Renderer());
-        table.getColumnModel().getColumn(4).setCellEditor(new TableActionCell(new TableActionCell.TableActionEvent() {
+        // Gắn Renderer và Editor (nút Sửa/Xóa) vào cột 5
+        table.getColumnModel().getColumn(5).setCellRenderer(new TableActionCell.Renderer());
+        table.getColumnModel().getColumn(5).setCellEditor(new TableActionCell(new TableActionCell.TableActionEvent() {
 
             @Override
             public void onDelete(int row) {
@@ -76,43 +81,56 @@ public class DichvuUI extends JPanel {
                         "Xác nhận xóa", JOptionPane.YES_NO_OPTION);
                 if (confirm == JOptionPane.YES_OPTION) {
                     dichVuService.deleteDichVu(selectedDV.getMaDV());
-                    loadData(); // Tải lại bảng sau khi xóa
+                    loadData(); 
                 }
             }
 
             @Override
             public void onEdit(int row) {
-                // ĐÃ BỔ SUNG: Mở form sửa dữ liệu
                 DichVu selectedDV = currentList.get(row);
                 showDichVuDialog(selectedDV);
             }
         }));
+
+        // Chỉnh độ rộng cột cho phù hợp với nội dung hiển thị
+        table.getColumnModel().getColumn(0).setPreferredWidth(100);
+        table.getColumnModel().getColumn(1).setPreferredWidth(150);
+        table.getColumnModel().getColumn(2).setPreferredWidth(100);
+        table.getColumnModel().getColumn(3).setPreferredWidth(100);
+        table.getColumnModel().getColumn(4).setPreferredWidth(150); // Cột đơn giá
+        table.getColumnModel().getColumn(5).setPreferredWidth(100); // Cột hành động
 
         card.add(UITheme.wrapTable(table), BorderLayout.CENTER);
         return card;
     }
 
     private void loadData() {
-        tableModel.setRowCount(0); // Xóa data cũ
-        currentList = dichVuService.getAllDichVu(); // Gọi DB
+        tableModel.setRowCount(0); 
+        currentList = dichVuService.getAllDichVu(); 
+        
         if (currentList != null) {
             for (DichVu dv : currentList) {
+                // Lấy đơn giá nguyên bản (double) từ đợt giá đang áp dụng
+                double gia = bangGiaService.getDonGiaDichVuDeTinhToan(dv.getMaDV());
+                
+                // Format lại thành chuỗi tiền tệ để hiển thị
+                String giaHienThi = (gia > 0) ? String.format("%,.0f VNĐ", gia) : "Chưa cấu hình";
+
                 tableModel.addRow(new Object[]{
                     dv.getMaDV(), 
                     dv.getTenDV(), 
                     dv.getDonVi(), 
                     dv.getLoaiDichVu(), 
-                    "" // Ô cuối cùng để trống cho Renderer vẽ nút
+                    giaHienThi, // Đưa giá vào cột 4
+                    "" 
                 });
             }
         }
     }
 
-    // ĐÃ BỔ SUNG: Hàm hiển thị Dialog Thêm/Sửa
     private void showDichVuDialog(DichVu dv) {
         Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
         
-        // Mở dialog và truyền callback để refresh bảng khi lưu thành công
         DichVuDialog dialog = new DichVuDialog(parentFrame, dichVuService, dv, () -> {
             loadData(); 
         });

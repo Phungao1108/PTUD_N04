@@ -20,6 +20,32 @@ public class Phong {
         this.isDeleted = isDeleted;
     }
 
+    public String getToa() {
+        if (this.maPhong == null || this.maPhong.isEmpty()) {
+            return "Khác";
+        }
+        // Dùng Regex giữ lại toàn bộ chữ cái, loại bỏ số (VD: "A101" -> "A", "b205" -> "B")
+        String toa = this.maPhong.replaceAll("[^a-zA-Z]", "").trim();
+        return toa.isEmpty() ? "Khác" : toa.toUpperCase();
+    }
+
+    public String getTang() {
+        if (this.maPhong == null || this.maPhong.isEmpty()) {
+            return "Khác";
+        }
+        // Dùng Regex giữ lại toàn bộ số, loại bỏ chữ (VD: "A101" -> "101", "B1205" -> "1205")
+        String numbers = this.maPhong.replaceAll("[^0-9]", "");
+        
+        // Quy tắc: 2 số cuối là số phòng, phần đứng trước là tầng
+        // VD: 101 -> Tầng 1 | 205 -> Tầng 2 | 1205 -> Tầng 12
+        if (numbers.length() >= 3) {
+            return numbers.substring(0, numbers.length() - 2);
+        } else if (!numbers.isEmpty()) {
+            return numbers; // Dự phòng cho trường hợp người nhập mã phòng chỉ có 1-2 chữ số
+        }
+        
+        return "Khác";
+    }
     public String getMaPhong() {
         return maPhong;
     }

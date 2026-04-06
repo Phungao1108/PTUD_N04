@@ -1,8 +1,10 @@
 package com.team.invoice.dialog;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.Frame;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -13,6 +15,7 @@ import java.util.Date;
 import java.util.List;
 
 import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JFormattedTextField;
@@ -22,6 +25,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.SwingConstants;
 
 import com.team.invoice.components.AppColors;
 import com.team.invoice.components.RoundedButton;
@@ -32,7 +36,7 @@ import com.team.invoice.entity.Room;
 import com.team.invoice.util.CurrencyUtils;
 
 public class CreateInvoiceDialog extends JDialog {
-    private JComboBox<String> cboPeriod;
+    private JTextField txtPeriod;
     private JComboBox<Room> cboRoom;
     private JTextField txtOldElectric;
     private JTextField txtNewElectric;
@@ -56,15 +60,33 @@ public class CreateInvoiceDialog extends JDialog {
 
     public CreateInvoiceDialog(Frame owner, List<Room> rooms) {
         super(owner, "Lập hóa đơn", true);
-        setSize(760, 650);
+        setSize(980, 720);
+        setMinimumSize(new Dimension(920, 680));
         setLocationRelativeTo(owner);
         setLayout(new BorderLayout());
         getContentPane().setBackground(AppColors.BG);
 
-        RoundedPanel content = new RoundedPanel(24, AppColors.WHITE, AppColors.BORDER);
-        content.setLayout(new BorderLayout());
-        content.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        add(content, BorderLayout.CENTER);
+        JPanel outer = new JPanel(new BorderLayout(0, 18));
+        outer.setBackground(AppColors.BG);
+        outer.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
+        add(outer, BorderLayout.CENTER);
+
+        outer.add(buildHeader(), BorderLayout.NORTH);
+
+        JPanel center = new JPanel(new BorderLayout(18, 0));
+        center.setOpaque(false);
+
+        RoundedPanel leftCard = new RoundedPanel(24, AppColors.WHITE, AppColors.BORDER);
+        leftCard.setLayout(new BorderLayout(0, 16));
+        leftCard.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        RoundedPanel rightCard = new RoundedPanel(24, AppColors.WHITE, AppColors.BORDER);
+        rightCard.setLayout(new BorderLayout(0, 16));
+        rightCard.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        rightCard.setPreferredSize(new Dimension(320, 0));
+
+        leftCard.add(createSectionTitle("Thông tin hóa đơn", "Nhập kỳ thu, phòng, chỉ số điện nước và hạn thanh toán."), BorderLayout.NORTH);
+        rightCard.add(createSectionTitle("Kết quả tính tiền", "Hệ thống sẽ hiển thị chi tiết từng khoản sau khi bấm tính tiền."), BorderLayout.NORTH);
 
         JPanel form = new JPanel(new GridBagLayout());
         form.setOpaque(false);
@@ -73,18 +95,27 @@ public class CreateInvoiceDialog extends JDialog {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.anchor = GridBagConstraints.WEST;
 
-        cboPeriod = new JComboBox<String>(new String[]{"10/2023", "11/2023", "12/2023", "01/2024"});
+        txtPeriod = createInputField();
+        txtPeriod.setText(new java.text.SimpleDateFormat("MM/yyyy").format(new Date()));
         cboRoom = new JComboBox<Room>(rooms.toArray(new Room[0]));
         txtOldElectric = createReadOnlyField();
-        txtNewElectric = new JTextField();
+        txtNewElectric = createInputField();
         txtOldWater = createReadOnlyField();
-        txtNewWater = new JTextField();
-        txtExtraFee = new JTextField("0");
+        txtNewWater = createInputField();
+        txtExtraFee = createInputField();
+        txtExtraFee.setText("0");
         txtDueDate = new JFormattedTextField(new SimpleDateFormat("dd/MM/yyyy"));
+        styleField(txtDueDate, false);
         txtDueDate.setText(new SimpleDateFormat("dd/MM/yyyy").format(new Date()));
-        txtNote = new JTextArea(4, 20);
+
+        txtNote = new JTextArea(5, 20);
         txtNote.setLineWrap(true);
         txtNote.setWrapStyleWord(true);
+        txtNote.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        txtNote.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
+        txtNote.setBackground(Color.WHITE);
+
+        styleCombo(cboRoom);
 
         lblRoomFee = createMoneyLabel();
         lblElectricFee = createMoneyLabel();
@@ -92,8 +123,9 @@ public class CreateInvoiceDialog extends JDialog {
         lblServiceFee = createMoneyLabel();
         lblTotal = createMoneyLabel();
         lblTotal.setForeground(AppColors.PRIMARY);
+        lblTotal.setFont(new Font("SansSerif", Font.BOLD, 18));
 
-        addField(form, gbc, 0, "Kỳ hóa đơn", cboPeriod);
+        addField(form, gbc, 0, "Kỳ hóa đơn (MM/yyyy)", txtPeriod);
         addField(form, gbc, 1, "Phòng/căn", cboRoom);
         addField(form, gbc, 2, "Chỉ số điện cũ", txtOldElectric);
         addField(form, gbc, 3, "Chỉ số điện mới", txtNewElectric);
@@ -102,50 +134,117 @@ public class CreateInvoiceDialog extends JDialog {
         addField(form, gbc, 6, "Phụ phí khác", txtExtraFee);
         addField(form, gbc, 7, "Hạn thanh toán", txtDueDate);
 
-        gbc.gridx = 0; gbc.gridy = 8;
+        gbc.gridx = 0;
+        gbc.gridy = 8;
         gbc.gridwidth = 2;
-        form.add(new JLabel("Ghi chú"), gbc);
+        JLabel lblNote = new JLabel("Ghi chú");
+        lblNote.setFont(new Font("SansSerif", Font.BOLD, 13));
+        form.add(lblNote, gbc);
+
         gbc.gridy = 9;
         JScrollPane noteScroll = new JScrollPane(txtNote);
-        noteScroll.setPreferredSize(new Dimension(200, 80));
+        noteScroll.setPreferredSize(new Dimension(200, 110));
+        noteScroll.setBorder(BorderFactory.createLineBorder(AppColors.BORDER));
         form.add(noteScroll, gbc);
 
-        gbc.gridy = 10;
-        form.add(buildSummaryPanel(), gbc);
+        leftCard.add(form, BorderLayout.CENTER);
+        rightCard.add(buildSummaryPanel(), BorderLayout.CENTER);
 
-        content.add(form, BorderLayout.CENTER);
-        content.add(buildActions(), BorderLayout.SOUTH);
+        center.add(leftCard, BorderLayout.CENTER);
+        center.add(rightCard, BorderLayout.EAST);
+
+        outer.add(center, BorderLayout.CENTER);
+        outer.add(buildActions(), BorderLayout.SOUTH);
 
         cboRoom.addActionListener(e -> updateOldIndexes());
         updateOldIndexes();
     }
 
+    private JPanel buildHeader() {
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
+
+        JLabel title = new JLabel("Lập hóa đơn");
+        title.setFont(new Font("SansSerif", Font.BOLD, 24));
+        title.setForeground(AppColors.TEXT);
+
+        JLabel subtitle = new JLabel("Tính toán và phát hành hóa đơn hàng tháng cho từng phòng.");
+        subtitle.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        subtitle.setForeground(AppColors.MUTED);
+
+        JPanel text = new JPanel();
+        text.setOpaque(false);
+        text.setLayout(new BoxLayout(text, BoxLayout.Y_AXIS));
+        text.add(title);
+        text.add(subtitle);
+
+        header.add(text, BorderLayout.WEST);
+        return header;
+    }
+
+    private JPanel createSectionTitle(String titleText, String subtitleText) {
+        JPanel panel = new JPanel();
+        panel.setOpaque(false);
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+
+        JLabel title = new JLabel(titleText);
+        title.setFont(new Font("SansSerif", Font.BOLD, 18));
+        title.setForeground(AppColors.TEXT);
+
+        JLabel subtitle = new JLabel("<html><body style='width:260px'>" + subtitleText + "</body></html>");
+        subtitle.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        subtitle.setForeground(AppColors.MUTED);
+
+        panel.add(title);
+        panel.add(subtitle);
+        return panel;
+    }
+
     private JPanel buildSummaryPanel() {
+        JPanel wrap = new JPanel(new BorderLayout());
+        wrap.setOpaque(false);
+
         JPanel summary = new JPanel(new GridBagLayout());
         summary.setOpaque(false);
         summary.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(AppColors.BORDER),
-                BorderFactory.createEmptyBorder(12, 12, 12, 12)));
+                BorderFactory.createEmptyBorder(14, 14, 14, 14)));
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(6, 6, 6, 6);
+        gbc.insets = new Insets(8, 6, 8, 6);
         gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
 
         addSummary(summary, gbc, 0, "Tiền phòng", lblRoomFee);
         addSummary(summary, gbc, 1, "Tiền điện", lblElectricFee);
         addSummary(summary, gbc, 2, "Tiền nước", lblWaterFee);
         addSummary(summary, gbc, 3, "Phí dịch vụ", lblServiceFee);
         addSummary(summary, gbc, 4, "Tổng cộng", lblTotal);
-        return summary;
+
+        JLabel hint = new JLabel("<html><body style='width:250px'>Sau khi bấm <b>Tính tiền</b>, hệ thống sẽ cập nhật chi tiết từng khoản ở khung này.</body></html>");
+        hint.setForeground(AppColors.MUTED);
+        hint.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        hint.setBorder(BorderFactory.createEmptyBorder(12, 0, 0, 0));
+
+        wrap.add(summary, BorderLayout.NORTH);
+        wrap.add(hint, BorderLayout.SOUTH);
+        return wrap;
     }
 
     private JPanel buildActions() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12));
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         panel.setOpaque(false);
+
         btnClose = new RoundedButton("Đóng", AppColors.WHITE, AppColors.TEXT, AppColors.BORDER);
         btnCalculate = new RoundedButton("Tính tiền", AppColors.WHITE, AppColors.TEXT, AppColors.BORDER);
         btnDraft = new RoundedButton("Tạo bản nháp mới", AppColors.WHITE, AppColors.PRIMARY, AppColors.PRIMARY);
         btnIssue = new RoundedButton("Phát hành hóa đơn", AppColors.PRIMARY, AppColors.WHITE, AppColors.PRIMARY);
+
+        btnClose.setPreferredSize(new Dimension(120, 38));
+        btnCalculate.setPreferredSize(new Dimension(120, 38));
+        btnDraft.setPreferredSize(new Dimension(150, 38));
+        btnIssue.setPreferredSize(new Dimension(160, 38));
+
         panel.add(btnClose);
         panel.add(btnCalculate);
         panel.add(btnDraft);
@@ -154,27 +253,74 @@ public class CreateInvoiceDialog extends JDialog {
     }
 
     private void addField(JPanel panel, GridBagConstraints gbc, int row, String label, java.awt.Component comp) {
-        gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 1; gbc.weightx = 0.3;
-        panel.add(new JLabel(label), gbc);
-        gbc.gridx = 1; gbc.weightx = 0.7;
+        JLabel lbl = new JLabel(label);
+        lbl.setFont(new Font("SansSerif", Font.BOLD, 13));
+        lbl.setForeground(AppColors.TEXT);
+
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.gridwidth = 1;
+        gbc.weightx = 0.32;
+        panel.add(lbl, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 0.68;
         panel.add(comp, gbc);
     }
 
     private void addSummary(JPanel panel, GridBagConstraints gbc, int row, String label, JLabel value) {
-        gbc.gridx = 0; gbc.gridy = row;
-        panel.add(new JLabel(label), gbc);
+        JLabel lbl = new JLabel(label);
+        lbl.setFont(new Font("SansSerif", Font.BOLD, 13));
+        lbl.setForeground(AppColors.TEXT);
+
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.weightx = 0.5;
+        panel.add(lbl, gbc);
+
         gbc.gridx = 1;
+        gbc.weightx = 0.5;
         panel.add(value, gbc);
     }
 
     private JTextField createReadOnlyField() {
         JTextField field = new JTextField();
-        field.setEditable(false);
+        styleField(field, true);
         return field;
+    }
+
+    private JTextField createInputField() {
+        JTextField field = new JTextField();
+        styleField(field, false);
+        return field;
+    }
+
+    private void styleField(JTextField field, boolean readOnly) {
+        field.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(AppColors.BORDER),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)));
+        field.setPreferredSize(new Dimension(260, 40));
+        if (readOnly) {
+            field.setEditable(false);
+            field.setBackground(new Color(245, 247, 250));
+            field.setForeground(AppColors.MUTED);
+        } else {
+            field.setBackground(Color.WHITE);
+            field.setForeground(AppColors.TEXT);
+        }
+    }
+
+    private void styleCombo(JComboBox<?> combo) {
+        combo.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        combo.setBackground(Color.WHITE);
+        combo.setPreferredSize(new Dimension(260, 40));
     }
 
     private JLabel createMoneyLabel() {
         JLabel label = new JLabel("0 VNĐ");
+        label.setFont(new Font("SansSerif", Font.BOLD, 14));
+        label.setHorizontalAlignment(SwingConstants.RIGHT);
         return label;
     }
 
@@ -183,12 +329,15 @@ public class CreateInvoiceDialog extends JDialog {
         if (room != null) {
             txtOldElectric.setText(String.valueOf(room.getOldElectric()));
             txtOldWater.setText(String.valueOf(room.getOldWater()));
+        } else {
+            txtOldElectric.setText("");
+            txtOldWater.setText("");
         }
     }
 
     public InvoiceFormData getFormData() {
         InvoiceFormData data = new InvoiceFormData();
-        data.setPeriod((String) cboPeriod.getSelectedItem());
+        data.setPeriod(txtPeriod.getText());
         data.setRoom((Room) cboRoom.getSelectedItem());
         data.setNewElectric(parseInt(txtNewElectric.getText(), "Chỉ số điện mới"));
         data.setNewWater(parseInt(txtNewWater.getText(), "Chỉ số nước mới"));
@@ -237,6 +386,11 @@ public class CreateInvoiceDialog extends JDialog {
 
     public void clearCalculation() {
         calculatedInvoice = null;
+        lblRoomFee.setText("0 VNĐ");
+        lblElectricFee.setText("0 VNĐ");
+        lblWaterFee.setText("0 VNĐ");
+        lblServiceFee.setText("0 VNĐ");
+        lblTotal.setText("0 VNĐ");
     }
 
     public RoundedButton getBtnCalculate() { return btnCalculate; }

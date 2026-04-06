@@ -1,248 +1,336 @@
 package com.team.invoice.ui;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
 import java.awt.FlowLayout;
-import java.awt.Frame;
+import java.awt.Font;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
-import javax.swing.BoxLayout;
-import javax.swing.JComboBox;
+import javax.swing.AbstractCellEditor;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTable;
-import javax.swing.RowFilter;
-import javax.swing.SwingUtilities;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableRowSorter;
+import javax.swing.table.TableCellEditor;
+import javax.swing.table.TableCellRenderer;
 
-import com.team.invoice.components.HintTextField;
+import com.team.invoice.components.AppColors;
 import com.team.invoice.components.RoundedButton;
-import com.team.invoice.components.RoundedPanel;
-import com.team.invoice.components.TableActionCell;
 import com.team.invoice.components.UITheme;
-import com.team.invoice.dialog.PhongDialog;
-import com.team.invoice.entity.LoaiPhong;
 import com.team.invoice.entity.Phong;
-import com.team.invoice.service.LoaiPhongService;
+import com.team.invoice.service.BangGiaService;
 import com.team.invoice.service.PhongService;
-import com.team.invoice.util.FocusUtils;
 
 public class PhongUI extends JPanel {
 
-    private DefaultTableModel model;
-    private JTable table;
-    private HintTextField txtSearch;
-    private JComboBox<String> cboLoai;
-    private JComboBox<String> cboStatus;
-    private TableRowSorter<DefaultTableModel> sorter;
+    private DefaultTableModel modelPhong;
+    private JTable tablePhong;
 
-    private final PhongService phongService;
-    private List<Phong> currentList;
+    private PhongService phongService;
+    private BangGiaService bangGiaService;
+    
+    private RoundedButton btnThemPhong;
 
     public PhongUI() {
         phongService = new PhongService();
+        bangGiaService = new BangGiaService();
 
-        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-        UITheme.stylePage(this);
+        setLayout(new BorderLayout(10, 10));
+        setBackground(AppColors.BG);
+        setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        txtSearch = new HintTextField("Tìm theo tên phòng...");
-        cboLoai = new JComboBox<>();
-        cboStatus = new JComboBox<>(new String[] {
-            "Tất cả trạng thái",
-            "TRONG",
-            "ĐÃ THUÊ",
-            "BẢO TRÌ"
-        });
-
-        loadLoaiPhongToComboBox();
-
-        add(UITheme.createHeader(
-            "Quản lý Phòng",
-            "Quản lý danh sách phòng trong chung cư",
-            UITheme.actionBar(createAddButton())
-        ));
-
-        add(UITheme.vspace(20));
-        add(buildTableCard());
-
-        addFilterEvents();
+        initUI();
         loadData();
-
-        FocusUtils.enableClearFocusOnClick(this);
     }
 
-    private RoundedButton createAddButton() {
-        RoundedButton btnAdd = UITheme.primaryButton("Thêm Phòng");
-        btnAdd.addActionListener(e -> showPhongDialog(null));
-        return btnAdd;
-    }
+    private void initUI() {
+        // --- Header ---
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.setOpaque(false);
 
-    private void loadLoaiPhongToComboBox() {
-        cboLoai.removeAllItems();
-        cboLoai.addItem("Tất cả loại");
+        JLabel lblTitle = new JLabel("Danh Sách Phòng & Giá Cước");
+        lblTitle.setFont(lblTitle.getFont().deriveFont(20f));
+        topPanel.add(lblTitle, BorderLayout.WEST);
 
-        LoaiPhongService loaiPhongService = new LoaiPhongService();
-        List<LoaiPhong> dsLoaiPhong = loaiPhongService.getAllLoaiPhong();
+        JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        actionPanel.setOpaque(false);
 
-        if (dsLoaiPhong != null) {
-            for (LoaiPhong lp : dsLoaiPhong) {
-                cboLoai.addItem(lp.getMaLoaiPhong());
-            }
-        }
-    }
+        btnThemPhong = UITheme.primaryButton("Thêm Phòng Mới");
+        btnThemPhong.setBackground(new Color(46, 204, 113)); 
+        btnThemPhong.addActionListener(e -> showThemPhongDialog());
+        
+        actionPanel.add(btnThemPhong);
+        topPanel.add(actionPanel, BorderLayout.EAST);
+        add(topPanel, BorderLayout.NORTH);
 
-    private RoundedPanel buildTableCard() {
-        RoundedPanel card = UITheme.createCard();
-        card.setLayout(new BorderLayout(0, 16));
-
-        JPanel filterBar = new JPanel(new BorderLayout(12, 0));
-        filterBar.setOpaque(false);
-
-        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        right.setOpaque(false);
-
-        right.add(new JLabel("Loại:"));
-        right.add(cboLoai);
-
-        right.add(new JLabel("Trạng thái:"));
-        right.add(cboStatus);
-
-        filterBar.add(UITheme.wrapField(txtSearch), BorderLayout.CENTER);
-        filterBar.add(right, BorderLayout.EAST);
-
-        model = new DefaultTableModel(
-            new String[] {
-                "Mã phòng", "Tên phòng", "Loại", "Trạng thái", "Tầng", "Hành động"
-            }, 0
-        ) {
+        // --- Table ---
+        // Đã thêm cột Thao tác
+        String[] columnNames = {
+            "Cấu Trúc (Tòa -> Tầng -> Mã Phòng)", 
+            "Tên Phòng", 
+            "Loại Phòng", 
+            "Trạng Thái", 
+            "Giá (VNĐ/Tháng)",
+            "Thao Tác"
+        };
+        
+        modelPhong = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 5;
+                // CHỈ CHO PHÉP EDIT CỘT THAO TÁC (Cột index 5) ĐỂ BẮT SỰ KIỆN CLICK NÚT
+                // VÀ CHỈ CHO PHÉP KHI ĐÓ LÀ DÒNG PHÒNG (Giá trị cột 5 không rỗng)
+                if(column == 5) {
+                    Object val = getValueAt(row, 5);
+                    return val != null && !val.toString().trim().isEmpty();
+                }
+                return false; 
+            }
+        };
+        
+        tablePhong = new JTable(modelPhong);
+        UITheme.styleTable(tablePhong);
+        tablePhong.setRowHeight(40); // Tăng chiều cao dòng một chút để chứa nút bấm cho đẹp
+        
+        // Chỉnh độ rộng các cột
+        tablePhong.getColumnModel().getColumn(0).setPreferredWidth(250); 
+        tablePhong.getColumnModel().getColumn(1).setPreferredWidth(130);
+        tablePhong.getColumnModel().getColumn(2).setPreferredWidth(100);
+        tablePhong.getColumnModel().getColumn(3).setPreferredWidth(100);
+        tablePhong.getColumnModel().getColumn(4).setPreferredWidth(150);
+        tablePhong.getColumnModel().getColumn(5).setPreferredWidth(150); // Cột thao tác
+        
+        // Gắn Custom Renderers
+        setupTableRenderer();
+
+        JScrollPane scrollPane = new JScrollPane(tablePhong);
+        scrollPane.getViewport().setBackground(Color.WHITE);
+        scrollPane.setBorder(BorderFactory.createLineBorder(AppColors.BORDER));
+        
+        add(scrollPane, BorderLayout.CENTER);
+    }
+
+    private void setupTableRenderer() {
+        // 1. Renderer tô đậm cho các cột thông thường (Từ 0 đến 4)
+        DefaultTableCellRenderer standardRenderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                    boolean isSelected, boolean hasFocus, int row, int column) {
+
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                String categoryText = table.getValueAt(row, 0).toString();
+
+                if (categoryText.startsWith("Tòa")) {
+                    c.setFont(c.getFont().deriveFont(Font.BOLD));
+                    c.setBackground(new Color(230, 230, 230));
+                    c.setForeground(Color.BLACK);
+                } else if (categoryText.trim().startsWith("Tầng")) {
+                    c.setFont(c.getFont().deriveFont(Font.BOLD | Font.ITALIC));
+                    c.setBackground(new Color(245, 245, 245));
+                    c.setForeground(Color.DARK_GRAY);
+                } else {
+                    c.setFont(c.getFont().deriveFont(Font.PLAIN));
+                    c.setBackground(Color.WHITE);
+                    c.setForeground(Color.BLACK);
+                }
+
+                if (isSelected && !categoryText.startsWith("Tòa") && !categoryText.trim().startsWith("Tầng")) {
+                    c.setBackground(table.getSelectionBackground());
+                    c.setForeground(table.getSelectionForeground());
+                }
+
+                return c;
             }
         };
 
-        table = new JTable(model);
-        UITheme.styleTable(table);
-        table.setRowHeight(38);
+        for (int i = 0; i < 5; i++) {
+            tablePhong.getColumnModel().getColumn(i).setCellRenderer(standardRenderer);
+        }
 
-        table.getColumnModel().getColumn(5).setPreferredWidth(140);
-        table.getColumnModel().getColumn(5).setMinWidth(140);
-        table.getColumnModel().getColumn(5).setMaxWidth(160);
-
-        sorter = new TableRowSorter<>(model);
-        table.setRowSorter(sorter);
-
-        table.getColumnModel().getColumn(5).setCellRenderer(new TableActionCell.Renderer());
-        table.getColumnModel().getColumn(5).setCellEditor(new TableActionCell(new TableActionCell.TableActionEvent() {
-            @Override
-            public void onDelete(int row) {
-                int modelRow = table.convertRowIndexToModel(row);
-                Phong selectedPhong = currentList.get(modelRow);
-
-                int confirm = JOptionPane.showConfirmDialog(
-                    PhongUI.this,
-                    "Bạn có chắc muốn xóa phòng " + selectedPhong.getTenPhong() + "?",
-                    "Xác nhận xóa",
-                    JOptionPane.YES_NO_OPTION
-                );
-
-                if (confirm == JOptionPane.YES_OPTION) {
-                    String message = phongService.deletePhong(selectedPhong.getMaPhong());
-                    JOptionPane.showMessageDialog(PhongUI.this, message);
-                    loadData();
-                }
-            }
-
-            @Override
-            public void onEdit(int row) {
-                int modelRow = table.convertRowIndexToModel(row);
-                Phong selectedPhong = currentList.get(modelRow);
-                showPhongDialog(selectedPhong);
-            }
-        }));
-
-        card.add(filterBar, BorderLayout.NORTH);
-        card.add(UITheme.wrapTable(table), BorderLayout.CENTER);
-
-        return card;
+        // 2. Renderer và Editor ĐẶC BIỆT cho cột "Thao Tác" (Cột index 5)
+        tablePhong.getColumnModel().getColumn(5).setCellRenderer(new ButtonRenderer());
+        tablePhong.getColumnModel().getColumn(5).setCellEditor(new ButtonEditor(new JTable()));
     }
 
-    private void loadData() {
-        model.setRowCount(0);
-        currentList = phongService.getAllPhong();
+    public void loadData() {
+        modelPhong.setRowCount(0);
 
-        if (currentList != null) {
-            for (Phong p : currentList) {
-                model.addRow(new Object[] {
-                    p.getMaPhong(),
-                    p.getTenPhong(),
-                    p.getMaLoaiPhong(),
-                    p.getTrangThai(),
-                    p.getIdCha(),
-                    ""
-                });
+        List<Phong> danhSachToanBoPhong = phongService.getAllPhong();
+        
+        if (danhSachToanBoPhong == null || danhSachToanBoPhong.isEmpty()) {
+            return;
+        }
+
+        Map<String, Map<String, List<Phong>>> treeData = new TreeMap<>();
+
+        for (Phong p : danhSachToanBoPhong) {
+            String toa = p.getToa();
+            String tang = p.getTang();
+            treeData.computeIfAbsent(toa, k -> new TreeMap<>()).computeIfAbsent(tang, k -> new ArrayList<>()).add(p);
+        }
+
+        for (Map.Entry<String, Map<String, List<Phong>>> toaEntry : treeData.entrySet()) {
+            // Cột 5 để "" (Rỗng) để không hiển thị nút ở dòng Tòa
+            modelPhong.addRow(new Object[]{"Tòa " + toaEntry.getKey(), "", "", "", "", ""});
+
+            for (Map.Entry<String, List<Phong>> tangEntry : toaEntry.getValue().entrySet()) {
+                // Cột 5 để "" (Rỗng) để không hiển thị nút ở dòng Tầng
+                modelPhong.addRow(new Object[]{"    Tầng " + tangEntry.getKey(), "", "", "", "", ""});
+
+                for (Phong p : tangEntry.getValue()) {
+                    String giaHienThi = bangGiaService.getGiaPhongChoUI(p.getMaLoaiPhong());
+                    
+                    modelPhong.addRow(new Object[]{
+                        "        Mã: " + p.getMaPhong(),
+                        p.getTenPhong() != null ? p.getTenPhong() : "---",
+                        p.getMaLoaiPhong() != null ? p.getMaLoaiPhong() : "---",
+                        p.getTrangThai() != null ? p.getTrangThai() : "---",
+                        giaHienThi,
+                        p.getMaPhong() // GỬI MÃ PHÒNG VÀO CỘT 5 ĐỂ XỬ LÝ SỰ KIỆN NÚT BẤM
+                    });
+                }
             }
         }
     }
 
-    private void showPhongDialog(Phong phong) {
-        Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
-        PhongDialog dialog = new PhongDialog(parentFrame, phongService, phong, this::loadData);
-        dialog.setVisible(true);
+    // =========================================================
+    // CÁC HÀM XỬ LÝ CHỨC NĂNG CHÍNH (THÊM, SỬA, XÓA)
+    // =========================================================
+
+    private void showThemPhongDialog() {
+        JOptionPane.showMessageDialog(this, "Chức năng thêm phòng mới!\nVui lòng nối Form thêm phòng vào đây.");
+        // Gợi ý code sau khi ráp form:
+        // ThemPhongDialog dialog = new ThemPhongDialog(null, true);
+        // dialog.setVisible(true);
+        // loadData(); 
     }
 
-    private void addFilterEvents() {
-        txtSearch.getDocument().addDocumentListener(new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                applyFilters();
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                applyFilters();
-            }
-
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                applyFilters();
-            }
-        });
-
-        cboLoai.addActionListener(e -> applyFilters());
-        cboStatus.addActionListener(e -> applyFilters());
+    private void showSuaPhongDialog(String maPhong) {
+        JOptionPane.showMessageDialog(this, "Mở form CẬP NHẬT cho phòng: " + maPhong);
+        // Gợi ý code sau khi ráp form:
+        // SuaPhongDialog dialog = new SuaPhongDialog(null, true, maPhong);
+        // dialog.setVisible(true);
+        // loadData(); 
     }
 
-    private void applyFilters() {
-        String keyword = txtSearch.getText().trim();
-        String selectedLoai = cboLoai.getSelectedItem() == null ? "Tất cả loại" : cboLoai.getSelectedItem().toString();
-        String selectedStatus = cboStatus.getSelectedItem() == null ? "Tất cả trạng thái" : cboStatus.getSelectedItem().toString();
+    private void thucHienXoaPhong(String maPhong) {
+        int confirm = JOptionPane.showConfirmDialog(this, 
+                "Bạn có chắc chắn muốn xóa phòng [" + maPhong + "] không?\n(Hành động này không thể hoàn tác)", 
+                "Xác nhận xóa", 
+                JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                
+        if (confirm == JOptionPane.YES_OPTION) {
+            // BỎ COMMENT ĐOẠN DƯỚI ĐÂY KHI RÁP SERVICE XÓA
+            /*
+            boolean success = phongService.deletePhong(maPhong);
+            if (success) {
+                JOptionPane.showMessageDialog(this, "Xóa phòng thành công!");
+                loadData(); // Tự động load lại UI
+            } else {
+                JOptionPane.showMessageDialog(this, "Lỗi: Không thể xóa phòng này!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            }
+            */
+            
+            // Code test tạm thời (nhớ xóa khi ráp service thật)
+            JOptionPane.showMessageDialog(this, "Đã giả lập xóa xong phòng " + maPhong);
+            loadData();
+        }
+    }
 
-        sorter.setRowFilter(new RowFilter<DefaultTableModel, Integer>() {
-            @Override
-            public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
-                String tenPhongRow = entry.getStringValue(1);
-                String loaiRow = entry.getStringValue(2);
-                String trangThaiRow = entry.getStringValue(3);
+    // =========================================================
+    // CÁC LỚP TIỆN ÍCH ĐỂ HIỂN THỊ NÚT TRONG JTABLE (SWING MAGIC)
+    // =========================================================
 
-                if (tenPhongRow == null) {
-                    tenPhongRow = "";
+    // Panel chứa 2 nút bấm
+    class ActionPanel extends JPanel {
+        JButton btnEdit = new JButton("Sửa");
+        JButton btnDelete = new JButton("Xóa");
+
+        public ActionPanel() {
+            setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
+            setOpaque(true);
+            
+            // Làm đẹp nút Sửa
+            btnEdit.setBackground(new Color(52, 152, 219)); // Xanh dương
+            btnEdit.setForeground(Color.WHITE);
+            btnEdit.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            
+            // Làm đẹp nút Xóa
+            btnDelete.setBackground(new Color(231, 76, 60)); // Đỏ
+            btnDelete.setForeground(Color.WHITE);
+            btnDelete.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+            add(btnEdit);
+            add(btnDelete);
+        }
+    }
+
+    // Lớp hiển thị Panel (Vẽ nút lên bảng)
+    class ButtonRenderer implements TableCellRenderer {
+        private ActionPanel panel = new ActionPanel();
+        
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, 
+                boolean isSelected, boolean hasFocus, int row, int column) {
+            
+            // Nếu là dòng Tòa/Tầng (Giá trị truyền vào bị rỗng), hiển thị khoảng trắng
+            if (value == null || value.toString().trim().isEmpty()) {
+                JPanel emptyPanel = new JPanel();
+                emptyPanel.setBackground(new Color(245, 245, 245)); 
+                if (table.getValueAt(row, 0).toString().startsWith("Tòa")) {
+                    emptyPanel.setBackground(new Color(230, 230, 230));
                 }
-
-                boolean matchTenPhong = keyword.isEmpty()
-                        || tenPhongRow.toLowerCase().contains(keyword.toLowerCase());
-
-                boolean matchLoai = selectedLoai.equals("Tất cả loại")
-                        || loaiRow.equals(selectedLoai);
-
-                boolean matchTrangThai = selectedStatus.equals("Tất cả trạng thái")
-                        || trangThaiRow.equalsIgnoreCase(selectedStatus);
-
-                return matchTenPhong && matchLoai && matchTrangThai;
+                return emptyPanel;
             }
-        });
+
+            panel.setBackground(isSelected ? table.getSelectionBackground() : Color.WHITE);
+            return panel;
+        }
+    }
+
+    // Lớp xử lý sự kiện click chuột
+    class ButtonEditor extends AbstractCellEditor implements TableCellEditor {
+        private ActionPanel panel = new ActionPanel();
+        private String currentMaPhong;
+
+        public ButtonEditor(JTable table) {
+            panel.btnEdit.addActionListener(e -> {
+                fireEditingStopped(); // Dừng trạng thái edit bảng
+                showSuaPhongDialog(currentMaPhong); // Gọi hàm cập nhật
+            });
+
+            panel.btnDelete.addActionListener(e -> {
+                fireEditingStopped(); // Dừng trạng thái edit bảng
+                thucHienXoaPhong(currentMaPhong); // Gọi hàm xóa
+            });
+        }
+
+        @Override
+        public Component getTableCellEditorComponent(JTable table, Object value, 
+                boolean isSelected, int row, int column) {
+            
+            // Bỏ qua nếu là dòng Tòa/Tầng
+            if (value == null || value.toString().trim().isEmpty()) {
+                return new JLabel();
+            }
+
+            currentMaPhong = value.toString(); // Lấy mã phòng từ model để xử lý Sửa/Xóa
+            panel.setBackground(table.getSelectionBackground());
+            return panel;
+        }
+
+        @Override
+        public Object getCellEditorValue() {
+            return currentMaPhong;
+        }
     }
 }

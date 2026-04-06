@@ -47,10 +47,9 @@ public class SidebarPanel extends JPanel {
             "Phòng",
             "Dịch vụ",
             "Bảng giá",
+            "Hóa đơn",
             "Hợp đồng",
             "Khách thuê",
-            "Hóa đơn",
-            "Chi phí",
             "Cài đặt"
         };
 

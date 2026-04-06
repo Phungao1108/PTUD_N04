@@ -84,6 +84,84 @@ public class BangGiaService {
 		return "Đã bổ sung " + countPhong + " loại phòng và " + countDV
 				+ " dịch vụ mới vào đợt giá. Vui lòng cập nhật số tiền!";
 	}
+	public String createBangGiaToanDien(BangGia bg, List<DonGiaPhong> phongs, List<DonGiaDichVu> dichVus) {
+        if (bg.getMaBG() == null || bg.getMaBG().trim().isEmpty()) {
+            return "Mã Bảng Giá không được để trống!";
+        }
+        if (bg.getNgayHieuLuc() == null) {
+            return "Vui lòng chọn ngày bắt đầu hiệu lực!";
+        }
+
+        long todayMillis = System.currentTimeMillis();
+        long startMillis = bg.getNgayHieuLuc().getTime();
+        
+        // Logic xác định trạng thái
+        if (startMillis > todayMillis) {
+            bg.setTrangThai("CHUA_AP_DUNG"); // Tương lai
+        } else {
+            // Nếu ngày bắt đầu <= hiện tại
+            if (bg.getNgayKetThuc() != null && bg.getNgayKetThuc().getTime() < todayMillis) {
+                bg.setTrangThai("HET_HIEU_LUC"); // Quá khứ
+            } else {
+                bg.setTrangThai("DANG_AP_DUNG"); // Hiện tại
+                
+                // --- QUAN TRỌNG: CHỐT BẢNG GIÁ CŨ ---
+                // Nếu bảng giá mới là DANG_AP_DUNG, ta phải tìm bảng giá cũ đang áp dụng để chốt nó lại
+                String oldActiveId = bangGiaDAO.findActiveBangGiaId();
+                if (oldActiveId != null && !oldActiveId.equals(bg.getMaBG())) {
+                    // Chốt bảng giá cũ vào ngày hôm nay
+                    bangGiaDAO.chotDotGiaCu(oldActiveId, new java.util.Date());
+                }
+            }
+        }
+
+        // Lưu bảng giá mới cùng với toàn bộ chi tiết
+        boolean success = bangGiaDAO.insertBangGiaMoi(bg, phongs, dichVus);
+        return success ? "Thành công" : "Lỗi lưu cơ sở dữ liệu!";
+    }
+	// Lấy giá của loại phòng theo bảng giá đang áp dụng (Dành cho hiển thị UI)
+		public String getGiaPhongChoUI(String maLoaiPhong) {
+			String activeMaBG = bangGiaDAO.findActiveBangGiaId();
+			
+			// Nếu không có đợt giá nào đang áp dụng
+			if (activeMaBG == null) {
+				return "Chưa cấu hình";
+			}
+
+			List<DonGiaPhong> listGia = bangGiaDAO.findDonGiaPhongByMaBG(activeMaBG);
+			for (DonGiaPhong dp : listGia) {
+				if (dp.getMaLoaiPhong().equals(maLoaiPhong)) {
+					// Nếu giá có trong DB và lớn hơn 0 thì format, ngược lại báo chưa cấu hình
+					if (dp.getGiaTheoThang() > 0) {
+						return String.format("%,.0f VNĐ", dp.getGiaTheoThang());
+					} else {
+						return "Chưa cấu hình";
+					}
+				}
+			}
+			
+			// Nếu loại phòng này chưa từng được thêm vào đợt giá
+			return "Chưa cấu hình";
+		}
+		// =====================================================================
+		// CÁC HÀM LẤY SỐ LIỆU TÍNH TOÁN CHO MODULE KHÁC (HÓA ĐƠN, HỢP ĐỒNG)
+		// =====================================================================
+		
+		/**
+		 * Lấy giá tiền chính xác của Loại phòng theo bảng giá đang áp dụng.
+		 * Dùng để nhân/cộng/trừ khi tính tiền phòng.
+		 */
+		public double getDonGiaPhongDeTinhToan(String maLoaiPhong) {
+			return bangGiaDAO.getGiaLoaiPhongActive(maLoaiPhong);
+		}
+
+		/**
+		 * Lấy giá tiền chính xác của Dịch vụ (Điện, Nước, Rác...) theo bảng giá đang áp dụng.
+		 * Dùng để nhân với chỉ số tiêu thụ.
+		 */
+		public double getDonGiaDichVuDeTinhToan(String maDV) {
+			return bangGiaDAO.getGiaDichVuActive(maDV);
+		}
 	public boolean chotDotGiaCu(String maBG, java.util.Date ngayKetThuc) {
         return bangGiaDAO.chotDotGiaCu(maBG, ngayKetThuc);
     }

@@ -14,7 +14,7 @@ import com.team.invoice.util.DBConnection;
 
 public class BangGiaDAO {
 
-    public List<BangGia> findAllActive() {
+	public List<BangGia> findAllActive() {
         List<BangGia> list = new ArrayList<>();
         String sql = "SELECT * FROM BangGia WHERE isDeleted = 0";
         try (Connection conn = DBConnection.getConnection();
@@ -22,8 +22,10 @@ public class BangGiaDAO {
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
                 list.add(new BangGia(
-                        rs.getString("maBG"), rs.getDate("ngayHieuLuc"),
-                        rs.getDate("ngayKetThuc"), rs.getString("trangThai"),
+                        rs.getString("maBG"), 
+                        rs.getDate("ngayHieuLuc"),
+                        rs.getDate("ngayKetThuc"), 
+                        rs.getString("trangThai"),
                         rs.getBoolean("isDeleted")
                 ));
             }
@@ -33,6 +35,82 @@ public class BangGiaDAO {
         return list;
     }
 
+    // Cập nhật lại hàm insert (Bỏ moTa)
+    public boolean insertBangGiaMoi(BangGia bg, List<DonGiaPhong> dgpList, List<DonGiaDichVu> dgdList) {
+        Connection conn = null;
+        try {
+            conn = DBConnection.getConnection();
+            conn.setAutoCommit(false); 
+
+            // 1. Insert Bảng Giá (Xóa moTa, còn 4 dấu chấm hỏi + isDeleted = 0)
+            String sqlBG = "INSERT INTO BangGia (maBG, ngayHieuLuc, ngayKetThuc, trangThai, isDeleted) VALUES (?, ?, ?, ?, 0)";
+            try (PreparedStatement stmtBG = conn.prepareStatement(sqlBG)) {
+                stmtBG.setString(1, bg.getMaBG());
+                stmtBG.setDate(2, new java.sql.Date(bg.getNgayHieuLuc().getTime()));
+                
+                if (bg.getNgayKetThuc() != null) {
+                    stmtBG.setDate(3, new java.sql.Date(bg.getNgayKetThuc().getTime()));
+                } else {
+                    stmtBG.setNull(3, java.sql.Types.DATE);
+                }
+                
+                stmtBG.setString(4, bg.getTrangThai());
+                stmtBG.executeUpdate();
+            }
+
+            // ... (Phần insert Phòng và Dịch vụ bên dưới giữ nguyên y hệt) ...
+            // 2. Insert Đơn Giá Phòng
+            if (dgpList != null && !dgpList.isEmpty()) {
+                String sqlDP = "INSERT INTO DonGiaPhong (maBG, maLoaiPhong, giaTheoThang) VALUES (?, ?, ?)";
+                try (PreparedStatement stmtDP = conn.prepareStatement(sqlDP)) {
+                    for (DonGiaPhong dp : dgpList) {
+                        stmtDP.setString(1, bg.getMaBG());
+                        stmtDP.setString(2, dp.getMaLoaiPhong());
+                        stmtDP.setDouble(3, dp.getGiaTheoThang());
+                        stmtDP.addBatch(); 
+                    }
+                    stmtDP.executeBatch();
+                }
+            }
+
+            // 3. Insert Đơn Giá Dịch Vụ
+            if (dgdList != null && !dgdList.isEmpty()) {
+                String sqlDD = "INSERT INTO DonGiaDichVu (maBG, maDV, gia) VALUES (?, ?, ?)";
+                try (PreparedStatement stmtDD = conn.prepareStatement(sqlDD)) {
+                    for (DonGiaDichVu dd : dgdList) {
+                        stmtDD.setString(1, bg.getMaBG());
+                        stmtDD.setString(2, dd.getMaDV());
+                        stmtDD.setDouble(3, dd.getGia());
+                        stmtDD.addBatch();
+                    }
+                    stmtDD.executeBatch();
+                }
+            }
+
+            conn.commit(); 
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            if (conn != null) try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
+            return false;
+        } finally {
+            if (conn != null) try { conn.setAutoCommit(true); conn.close(); } catch (SQLException e) { e.printStackTrace(); }
+        }
+    }
+ // Lấy ID của bảng giá đang áp dụng (để tự động chốt)
+    public String findActiveBangGiaId() {
+        String sql = "SELECT maBG FROM BangGia WHERE trangThai = 'DANG_AP_DUNG' AND isDeleted = 0";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            if (rs.next()) {
+                return rs.getString("maBG");
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return null;
+    }
+
+   
     // Lấy chi tiết đơn giá phòng của một bảng giá cụ thể, kèm theo tên loại phòng để hiển thị UI
     public List<DonGiaPhong> findDonGiaPhongByMaBG(String maBG) {
         List<DonGiaPhong> list = new ArrayList<>();
@@ -133,69 +211,7 @@ public class BangGiaDAO {
         } catch (SQLException e) { return false; }
     }
 
-    // --- TRANSACTION LOGIC: LƯU TẤT CẢ CÙNG LÚC ---
-    public boolean insertBangGiaMoi(BangGia bg, List<DonGiaPhong> dgpList, List<DonGiaDichVu> dgdList) {
-        Connection conn = null;
-        try {
-            conn = DBConnection.getConnection();
-            conn.setAutoCommit(false); // Bắt đầu Transaction
-
-            // 1. Insert Bảng Giá
-            String sqlBG = "INSERT INTO BangGia (maBG, ngayHieuLuc, trangThai, isDeleted) VALUES (?, ?, 'DANG_AP_DUNG', 0)";
-            try (PreparedStatement stmtBG = conn.prepareStatement(sqlBG)) {
-                stmtBG.setString(1, bg.getMaBG());
-                stmtBG.setDate(2, new java.sql.Date(bg.getNgayHieuLuc().getTime()));
-                stmtBG.executeUpdate();
-            }
-
-            // 2. Insert Đơn Giá Phòng
-            String sqlDP = "INSERT INTO DonGiaPhong (maBG, maLoaiPhong, giaTheoThang) VALUES (?, ?, ?)";
-            try (PreparedStatement stmtDP = conn.prepareStatement(sqlDP)) {
-                for (DonGiaPhong dp : dgpList) {
-                    stmtDP.setString(1, bg.getMaBG());
-                    stmtDP.setString(2, dp.getMaLoaiPhong());
-                    stmtDP.setDouble(3, dp.getGiaTheoThang());
-                    stmtDP.addBatch(); // Sử dụng Batch cho hiệu năng cao
-                }
-                stmtDP.executeBatch();
-            }
-
-            // 3. Insert Đơn Giá Dịch Vụ
-            String sqlDD = "INSERT INTO DonGiaDichVu (maBG, maDV, gia) VALUES (?, ?, ?)";
-            try (PreparedStatement stmtDD = conn.prepareStatement(sqlDD)) {
-                for (DonGiaDichVu dd : dgdList) {
-                    stmtDD.setString(1, bg.getMaBG());
-                    stmtDD.setString(2, dd.getMaDV());
-                    stmtDD.setDouble(3, dd.getGia());
-                    stmtDD.addBatch();
-                }
-                stmtDD.executeBatch();
-            }
-
-            conn.commit(); // Hoàn thành Transaction
-            return true;
-            
-        } catch (SQLException e) {
-            e.printStackTrace();
-            if (conn != null) {
-                try {
-                    conn.rollback(); // Nếu có lỗi, rollback lại toàn bộ
-                } catch (SQLException ex) {
-                    ex.printStackTrace();
-                }
-            }
-            return false;
-        } finally {
-            if (conn != null) {
-                try {
-                    conn.setAutoCommit(true);
-                    conn.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
+   
     public boolean chotDotGiaCu(String maBG, java.util.Date ngayKetThuc) {
         String sql = "UPDATE BangGia SET ngayKetThuc = ?, trangThai = 'HET_HIEU_LUC' WHERE maBG = ?";
         try (java.sql.Connection conn = com.team.invoice.util.DBConnection.getConnection();
@@ -207,6 +223,49 @@ public class BangGiaDAO {
             e.printStackTrace();
             return false;
         }
+    }
+ // =====================================================================
+    // CÁC HÀM PHỤC VỤ CHO TÍNH TOÁN (LẬP HÓA ĐƠN, TÍNH TIỀN) Ở MODULE KHÁC
+    // =====================================================================
+
+    // 1. Lấy đơn giá nguyên bản (double) của một Loại Phòng đang áp dụng
+    public double getGiaLoaiPhongActive(String maLoaiPhong) {
+        String activeBG = findActiveBangGiaId();
+        if (activeBG == null) return 0.0; // Chưa có đợt giá nào
+
+        String sql = "SELECT giaTheoThang FROM DonGiaPhong WHERE maBG = ? AND maLoaiPhong = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, activeBG);
+            stmt.setString(2, maLoaiPhong);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getDouble("giaTheoThang");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0.0;
+    }
+
+    // 2. Lấy đơn giá nguyên bản (double) của một Dịch Vụ đang áp dụng
+    public double getGiaDichVuActive(String maDV) {
+        String activeBG = findActiveBangGiaId();
+        if (activeBG == null) return 0.0;
+
+        String sql = "SELECT gia FROM DonGiaDichVu WHERE maBG = ? AND maDV = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, activeBG);
+            stmt.setString(2, maDV);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getDouble("gia");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0.0;
     }
     public boolean deleteBangGiaToanBo(String maBG) {
         Connection conn = null;

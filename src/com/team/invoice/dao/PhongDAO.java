@@ -126,6 +126,35 @@ public class PhongDAO {
             return stmt.executeUpdate() > 0;
         }
     }
+    public List<Object[]> findAllCSVCForTree() throws SQLException {
+        List<Object[]> list = new ArrayList<>();
+        // Sắp xếp theo Loại để phân nhóm logic từ lớn đến nhỏ
+        String sql = """
+            SELECT id, ten, loai, idCha, trangThaiPhong, maLoaiPhong
+            FROM CoSoVatChat
+            WHERE isDeleted = 0
+            ORDER BY 
+                CASE loai WHEN 'TOA' THEN 1 WHEN 'TANG' THEN 2 ELSE 3 END, 
+                idCha, id
+        """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                list.add(new Object[]{
+                    rs.getString("id"),
+                    rs.getString("ten"),
+                    rs.getString("loai"),
+                    rs.getString("idCha"),
+                    rs.getString("trangThaiPhong"),
+                    rs.getString("maLoaiPhong")
+                });
+            }
+        }
+        return list;
+    }
 
     public boolean delete(String maPhong) throws SQLException {
         String sql = """
@@ -161,5 +190,63 @@ public class PhongDAO {
         }
 
         return list;
+    }
+ // Lấy danh sách tất cả các Tòa đang hoạt động
+    public List<String> findAllToaIds() throws SQLException {
+        List<String> list = new ArrayList<>();
+        String sql = """
+            SELECT id 
+            FROM CoSoVatChat 
+            WHERE loai = 'TOA' AND isDeleted = 0 
+            ORDER BY id
+        """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                list.add(rs.getString("id"));
+            }
+        }
+        return list;
+    }
+
+    // Kiểm tra trùng ID chung cho tất cả Cơ sở vật chất (Tòa, Tầng, Phòng)
+    public boolean existsById(String id) throws SQLException {
+        String sql = """
+            SELECT 1 
+            FROM CoSoVatChat 
+            WHERE id = ? AND isDeleted = 0
+        """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, id);
+            ResultSet rs = stmt.executeQuery();
+            return rs.next();
+        }
+    }
+
+    // Hàm Insert động cho cả Tòa, Tầng và Phòng
+    public boolean insertCSVC(Phong p, String loai) throws SQLException {
+        String sql = """
+            INSERT INTO CoSoVatChat
+            (id, ten, loai, idCha, trangThaiPhong, maLoaiPhong, isDeleted)
+            VALUES (?, ?, ?, ?, ?, ?, 0)
+        """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, p.getMaPhong());
+            stmt.setString(2, p.getTenPhong());
+            stmt.setString(3, loai); // Truyền vào 'TOA', 'TANG', hoặc 'PHONG'
+            stmt.setString(4, p.getIdCha()); // Có thể null nếu là Tòa
+            stmt.setString(5, p.getTrangThai());
+            stmt.setString(6, p.getMaLoaiPhong()); // Có thể null nếu là Tòa/Tầng
+
+            return stmt.executeUpdate() > 0;
+        }
     }
 }
